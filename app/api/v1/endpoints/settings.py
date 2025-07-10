@@ -381,7 +381,9 @@ class ServerDropdownResponse(BaseModel):
 async def get_current_server_selection():
     """获取当前服务器选择"""
     try:
-        current_server = config_service.get_current_server_selection()
+        current_server = await config_service.get_system_setting_async("current_server_selection")
+        if current_server is None:
+            current_server = ""
         
         return ApiResponse.success_response(
             data={"server_name": current_server},
@@ -406,7 +408,11 @@ async def set_current_server_selection(
 ):
     """设置当前服务器选择"""
     try:
-        success = config_service.set_current_server_selection(selection.server_name)
+        success = await config_service.set_system_setting_async(
+            "current_server_selection", 
+            selection.server_name, 
+            "当前选择的数据库服务器名称"
+        )
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -440,7 +446,9 @@ async def get_server_dropdown():
         database_servers = await config_service.get_database_servers_async()
         
         # 获取当前服务器选择
-        current_server = config_service.get_current_server_selection()
+        current_server = await config_service.get_system_setting_async("current_server_selection")
+        if current_server is None:
+            current_server = ""
         
         # 构建下拉框选项
         server_options = []
