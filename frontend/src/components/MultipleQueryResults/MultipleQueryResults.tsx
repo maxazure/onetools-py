@@ -184,10 +184,27 @@ const MultipleQueryResults: React.FC<MultipleQueryResultsProps> = ({
                         </Button>
                       </div>
                       
-                      <div style={{ padding: '8px 12px', background: '#fafafa', borderTop: '1px solid #f0f0f0' }}>
+                      <div style={{ 
+                        padding: '8px 12px', 
+                        background: '#fafafa', 
+                        borderTop: '1px solid #f0f0f0',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
                         <Text type="secondary">
                           记录数: {result.total}
                         </Text>
+
+                        <Button
+                          icon={<CopyOutlined />}
+                          onClick={() => handleCopyToClipboard(index)}
+                          disabled={!result.data || result.data.length === 0}
+                          size="small"
+                          type="text"
+                        >
+                          复制
+                        </Button>
                       </div>
                     </div>
                   )}
