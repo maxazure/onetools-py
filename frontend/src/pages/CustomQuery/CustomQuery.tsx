@@ -50,15 +50,11 @@ const CustomQuery: React.FC = () => {
     queryKey: ['system-setting', 'default_custom_query_sql'],
     queryFn: async () => {
       try {
-        console.log('Fetching default SQL setting...');
         const response = await apiService.getSystemSetting('default_custom_query_sql');
-        console.log('Default SQL setting response:', response);
         
         if (response.success && response.data?.value) {
-          console.log('Found default SQL setting:', response.data.value);
           return response.data.value;
         } else {
-          console.log('No default SQL setting found, using fallback');
           return 'SELECT * FROM OneToolsDb.dbo.Users;';
         }
       } catch (error) {
@@ -72,28 +68,11 @@ const CustomQuery: React.FC = () => {
 
   // Initialize SQL query with default setting
   useEffect(() => {
-    console.log('defaultSqlSetting:', defaultSqlSetting, 'location.state?.sql:', location.state?.sql);
-    
-    // Always set the default SQL setting if available and no SQL from navigation
-    if (defaultSqlSetting && !location.state?.sql && !sqlQuery) {
-      console.log('Setting SQL query to default setting:', defaultSqlSetting);
+    // Only set default SQL setting when it's first loaded and no navigation SQL
+    if (defaultSqlSetting && !location.state?.sql) {
       setSqlQuery(defaultSqlSetting);
     }
-    // Also update if the setting has changed and no navigation SQL
-    else if (defaultSqlSetting && !location.state?.sql && sqlQuery !== defaultSqlSetting) {
-      console.log('Updating SQL query to new default setting:', defaultSqlSetting);
-      setSqlQuery(defaultSqlSetting);
-    }
-  }, [defaultSqlSetting, location.state?.sql, sqlQuery]);
-
-  // Debug effect to log settings loading status
-  useEffect(() => {
-    console.log('Settings loading status:', {
-      isLoading: isLoadingSettings,
-      error: settingsError,
-      data: defaultSqlSetting
-    });
-  }, [isLoadingSettings, settingsError, defaultSqlSetting]);
+  }, [defaultSqlSetting, location.state?.sql]);
 
   // Handle incoming SQL from saved queries navigation
   useEffect(() => {
@@ -226,10 +205,31 @@ const CustomQuery: React.FC = () => {
     message.info('Query cleared');
   }, [message]);
 
-  const handleReloadDefault = useCallback(() => {
-    // Force reload default SQL setting
-    queryClient.invalidateQueries({ queryKey: ['system-setting', 'default_custom_query_sql'] });
-    message.info('Reloading default SQL setting...');
+  const handleReloadDefault = useCallback(async () => {
+    try {
+      // Force reload default SQL setting
+      queryClient.invalidateQueries({ queryKey: ['system-setting', 'default_custom_query_sql'] });
+      
+      // Wait a moment for the query to refetch, then get the latest value
+      setTimeout(async () => {
+        try {
+          const response = await apiService.getSystemSetting('default_custom_query_sql');
+          if (response.success && response.data?.value) {
+            setSqlQuery(response.data.value);
+            message.success('Default SQL reloaded successfully');
+          } else {
+            message.warning('No default SQL setting found');
+          }
+        } catch (error) {
+          console.error('Error reloading default SQL:', error);
+          message.error('Failed to reload default SQL');
+        }
+      }, 100);
+      
+    } catch (error) {
+      console.error('Error invalidating query:', error);
+      message.error('Failed to reload default SQL');
+    }
   }, [queryClient, message]);
 
   const handleExport = useCallback((format: 'csv' | 'excel') => {
@@ -264,7 +264,7 @@ const CustomQuery: React.FC = () => {
           }
           size="small"
           style={{ height: '320px' }}
-          bodyStyle={{ height: '280px', padding: '16px' }}
+          styles={{ body: { height: '280px', padding: '16px' } }}
         >
           <SqlEditor
             value={sqlQuery}
