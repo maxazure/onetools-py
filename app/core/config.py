@@ -1,11 +1,8 @@
 """Configuration management with Pydantic Settings"""
 
-import os
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import List, Optional
 from functools import lru_cache
 
-import yaml
 from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -123,7 +120,6 @@ class Settings(BaseSettings):
     server_port: int = Field(default=15008, env="SERVER_PORT")
     
     # Additional settings
-    config_file_path: Optional[str] = Field(default="config/settings.yaml", env="CONFIG_FILE_PATH")
     hot_reload_enabled: bool = Field(default=True, env="HOT_RELOAD_ENABLED")
     
     @property
@@ -174,33 +170,6 @@ class Settings(BaseSettings):
             raise ValueError(f"Environment must be one of: {valid_envs}")
         return v.lower()
     
-    def load_from_yaml(self, file_path: str) -> None:
-        """Load configuration from YAML file"""
-        config_path = Path(file_path)
-        if config_path.exists():
-            with open(config_path, "r", encoding="utf-8") as f:
-                yaml_config = yaml.safe_load(f)
-                self._update_from_dict(yaml_config)
-    
-    def _update_from_dict(self, config_dict: Dict[str, Any]) -> None:
-        """Update settings from a dictionary (e.g., from YAML)."""
-        for key, value in config_dict.items():
-            # Handle nested configuration objects like 'database', 'server', etc.
-            if isinstance(value, dict):
-                # Handle new style nested models
-                if hasattr(self, key) and isinstance(getattr(self, key), BaseModel):
-                    nested_model = getattr(self, key)
-                    for f_key, f_value in value.items():
-                        if hasattr(nested_model, f_key):
-                            setattr(nested_model, f_key, f_value)
-                # Handle old style flattened attributes
-                else:
-                    for nested_key, nested_value in value.items():
-                        if hasattr(self, nested_key):
-                            setattr(self, nested_key, nested_value)
-            # Handle top-level simple values
-            elif hasattr(self, key):
-                setattr(self, key, value)
     
 
 

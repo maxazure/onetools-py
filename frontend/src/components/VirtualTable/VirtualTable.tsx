@@ -104,10 +104,12 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
         <div style={{
           position: 'sticky',
           top: 0,
-          zIndex: 10,
+          zIndex: 100,
           backgroundColor: '#fafafa',
-          borderBottom: '1px solid #d9d9d9',
-          display: 'flex'
+          borderBottom: '2px solid #d9d9d9',
+          display: 'flex',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          height: '41px'
         }}>
           {columns.map((column, index) => (
             <div
@@ -133,7 +135,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
         {/* 可视区域数据行 */}
         <div style={{
           position: 'absolute',
-          top: offsetY + 41, // 表头高度
+          top: offsetY + 43, // 表头高度 + 边框
           left: 0,
           right: 0
         }}>

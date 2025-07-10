@@ -135,31 +135,6 @@ const QueryResults: React.FC<QueryResultsProps> = ({
     >
       {data && (
         <>
-          {/* Statistics */}
-          <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col span={8}>
-              <Statistic
-                title="记录数"
-                value={data.total_count}
-                formatter={(value) => value?.toLocaleString()}
-              />
-            </Col>
-            <Col span={8}>
-              <Statistic
-                title="列数"
-                value={data.columns.length}
-              />
-            </Col>
-            <Col span={8}>
-              <Statistic
-                title="执行时间"
-                value={data.execution_time}
-                suffix="秒"
-                precision={2}
-              />
-            </Col>
-          </Row>
-
           {/* High Performance Virtual Table */}
           <VirtualTable
             data={data?.data || []}

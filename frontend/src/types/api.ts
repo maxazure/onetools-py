@@ -30,7 +30,7 @@ export interface PaginatedResponse<T = any> {
 }
 
 // Query types
-export type QueryType = 'USER' | 'TRANSACTION' | 'CUSTOM' | 'DYNAMIC';
+export type QueryType = 'CUSTOM' | 'DYNAMIC';
 
 export interface QueryRequest {
   query_type: QueryType;
