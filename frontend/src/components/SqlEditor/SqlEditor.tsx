@@ -225,7 +225,7 @@ const SqlEditor: React.FC<SqlEditorProps> = ({
           snippetSuggestions: 'none',
           quickSuggestions: false, // 完全禁用快速建议
           hover: { enabled: false }, // 禁用悬停提示
-          occurrencesHighlight: false, // 禁用occurrence高亮
+          occurrencesHighlight: 'off', // 禁用occurrence高亮
           selectionHighlight: false, // 禁用选择高亮
           renderLineHighlight: 'none', // 禁用行高亮
           smoothScrolling: false, // 禁用平滑滚动
