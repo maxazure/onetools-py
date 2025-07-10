@@ -343,30 +343,6 @@ class ApiService {
     return response.data;
   }
 
-  // System settings key-value API
-  async getSystemSetting(key: string): Promise<ApiResponse> {
-    const response = await this.client.get(`${API_CONFIG.ENDPOINTS.SETTINGS}/system/${key}`);
-    return response.data;
-  }
-
-  async setSystemSetting(key: string, value: any, description?: string): Promise<ApiResponse> {
-    const payload: any = { key, value };
-    if (description !== undefined) {
-      payload.description = description;
-    }
-    const response = await this.client.post(`${API_CONFIG.ENDPOINTS.SETTINGS}/system`, payload);
-    return response.data;
-  }
-
-  async getAllSystemSettings(): Promise<ApiResponse> {
-    const response = await this.client.get(`${API_CONFIG.ENDPOINTS.SETTINGS}/system`);
-    return response.data;
-  }
-
-  async deleteSystemSetting(key: string): Promise<ApiResponse> {
-    const response = await this.client.delete(`${API_CONFIG.ENDPOINTS.SETTINGS}/system/${key}`);
-    return response.data;
-  }
 }
 
 export const apiService = new ApiService();

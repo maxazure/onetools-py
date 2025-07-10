@@ -289,7 +289,7 @@ const SavedQueries: React.FC = () => {
       key: 'query_type',
       width: 100,
       render: (type: QueryType) => (
-        <Tag color={type === 'CUSTOM' ? 'blue' : type === 'USER' ? 'green' : 'orange'}>
+        <Tag color={type === 'CUSTOM' ? 'blue' : type === 'DYNAMIC' ? 'green' : 'orange'}>
           {type}
         </Tag>
       ),
