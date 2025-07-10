@@ -24,6 +24,11 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
 }) => {
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(height);
+  const [columnWidths, setColumnWidths] = useState<number[]>(
+    () => columns.map(() => 120) // 初始宽度120px
+  );
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizingIndex, setResizingIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // 计算可视区域内需要渲染的行
@@ -49,6 +54,40 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
     const scrollTop = e.currentTarget.scrollTop;
     setScrollTop(scrollTop);
   }, []);
+
+  // 处理列宽调整
+  const handleMouseDown = useCallback((e: React.MouseEvent, columnIndex: number) => {
+    e.preventDefault();
+    setIsResizing(true);
+    setResizingIndex(columnIndex);
+    
+    const startX = e.clientX;
+    const startWidth = columnWidths[columnIndex];
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = Math.max(60, startWidth + (e.clientX - startX)); // 最小宽度60px
+      const newWidths = [...columnWidths];
+      newWidths[columnIndex] = newWidth;
+      setColumnWidths(newWidths);
+    };
+    
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      setResizingIndex(-1);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [columnWidths]);
+
+  // 当列数变化时重置列宽
+  useEffect(() => {
+    if (columns.length !== columnWidths.length) {
+      setColumnWidths(columns.map(() => 120));
+    }
+  }, [columns.length, columnWidths.length]);
 
   // 总高度
   const totalHeight = data.length * rowHeight;
@@ -94,7 +133,8 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
         overflow: 'auto',
         border: '1px solid #d9d9d9',
         borderRadius: '6px',
-        position: 'relative'
+        position: 'relative',
+        userSelect: isResizing ? 'none' : 'auto'
       }}
       onScroll={handleScroll}
     >
@@ -115,8 +155,8 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
             <div
               key={index}
               style={{
-                flex: 1,
-                minWidth: '120px',
+                width: columnWidths[index],
+                minWidth: '60px',
                 padding: '8px 12px',
                 fontWeight: 600,
                 fontSize: '12px',
@@ -124,10 +164,27 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
                 textAlign: 'left',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                position: 'relative'
               }}
             >
               {column}
+              {/* 拖拽手柄 */}
+              {index < columns.length - 1 && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    right: '-2px',
+                    width: '4px',
+                    height: '100%',
+                    cursor: 'col-resize',
+                    backgroundColor: isResizing && resizingIndex === index ? '#1890ff' : 'transparent',
+                    zIndex: 10
+                  }}
+                  onMouseDown={(e) => handleMouseDown(e, index)}
+                />
+              )}
             </div>
           ))}
         </div>
@@ -155,8 +212,8 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
                   <div
                     key={colIndex}
                     style={{
-                      flex: 1,
-                      minWidth: '120px',
+                      width: columnWidths[colIndex],
+                      minWidth: '60px',
                       padding: '6px 12px',
                       fontSize: '12px',
                       borderRight: colIndex < columns.length - 1 ? '1px solid #f0f0f0' : 'none',

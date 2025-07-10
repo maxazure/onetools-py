@@ -66,12 +66,19 @@ async def execute_custom_query(
             "data": result.data,
             "total": result.total,
             "execution_time": result.execution_time,
-            "sql": result.sql
+            "sql": result.sql,
+            "is_multiple": getattr(result, 'is_multiple', False)
         }
+        
+        # 根据是否为多结果集调整消息
+        if getattr(result, 'is_multiple', False):
+            message_text = f"查询执行成功，返回 {result.total} 个结果集"
+        else:
+            message_text = f"查询执行成功，返回 {result.total} 条记录"
         
         return ApiResponse.success_response(
             data=response_data,
-            message=f"查询执行成功，返回 {result.total} 条记录"
+            message=message_text
         )
     
     except HTTPException:

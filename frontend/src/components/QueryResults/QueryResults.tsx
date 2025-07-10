@@ -63,6 +63,14 @@ const QueryResults: React.FC<QueryResultsProps> = ({
     }
   };
 
+  const calculateTableHeight = (rowCount: number): number => {
+    // 表头高度约 32px，每行约 32px，最多显示20行，最少显示2行
+    const headerHeight = 32;
+    const rowHeight = 32;
+    const maxRows = Math.min(Math.max(rowCount, 2), 20);
+    return headerHeight + (maxRows * rowHeight);
+  };
+
 
   if (error) {
     return (
@@ -139,7 +147,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({
           <VirtualTable
             data={data?.data || []}
             columns={data?.columns || []}
-            height={400}
+            height={calculateTableHeight(data?.total_count || 0)}
             loading={loading}
           />
 

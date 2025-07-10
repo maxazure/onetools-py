@@ -61,7 +61,7 @@ const SavedQueries: React.FC = () => {
     name: '',
     description: '',
     sql: '',
-    query_type: 'CUSTOM',
+    query_type: 'custom',
     params: {},
     is_public: false,
     tags: [],
@@ -84,9 +84,11 @@ const SavedQueries: React.FC = () => {
         // Ensure we return an array
         const data = response.data;
         if (Array.isArray(data)) {
+          console.log('Saved queries data is array:', data.length, 'items');
           return data;
         } else if (data && Array.isArray(data.items)) {
           // If the response has a paginated structure
+          console.log('Saved queries data is paginated:', data.items.length, 'items');
           return data.items;
         } else {
           console.warn('Unexpected saved queries data format:', data);
@@ -110,7 +112,7 @@ const SavedQueries: React.FC = () => {
   // Create saved query mutation
   const createQueryMutation = useMutation({
     mutationFn: (queryData: SavedQueryRequest) =>
-      queryHistoryApi.saveQuery(queryData.sql, queryData.name),
+      queryHistoryApi.saveQuery(queryData),
     onSuccess: () => {
       message.success('Query saved successfully!');
       setCreateModalVisible(false);
@@ -125,7 +127,7 @@ const SavedQueries: React.FC = () => {
   // Update saved query mutation
   const updateQueryMutation = useMutation({
     mutationFn: ({ id, queryData }: { id: number; queryData: SavedQueryRequest }) =>
-      queryHistoryApi.updateSavedQuery(id, queryData.sql, queryData.name),
+      queryHistoryApi.updateSavedQuery(id, queryData),
     onSuccess: () => {
       message.success('Query updated successfully!');
       setEditModalVisible(false);
@@ -157,7 +159,7 @@ const SavedQueries: React.FC = () => {
       name: '',
       description: '',
       sql: '',
-      query_type: 'CUSTOM',
+      query_type: 'custom',
       params: {},
       is_public: false,
       tags: [],
@@ -244,11 +246,11 @@ const SavedQueries: React.FC = () => {
     if (!savedQueries || !Array.isArray(savedQueries)) return [];
     
     return savedQueries.filter(query => {
-      // Search filter
+      // Search filter - ensure all fields exist before searching
       const matchesSearch = !searchText || 
-        query.name.toLowerCase().includes(searchText.toLowerCase()) ||
-        query.description?.toLowerCase().includes(searchText.toLowerCase()) ||
-        query.sql.toLowerCase().includes(searchText.toLowerCase());
+        (query.name && query.name.toLowerCase().includes(searchText.toLowerCase())) ||
+        (query.description && query.description.toLowerCase().includes(searchText.toLowerCase())) ||
+        (query.sql && query.sql.toLowerCase().includes(searchText.toLowerCase()));
       
       // Favorites filter
       const matchesFavorites = !filterFavorites || query.is_favorite;
@@ -289,8 +291,8 @@ const SavedQueries: React.FC = () => {
       key: 'query_type',
       width: 100,
       render: (type: QueryType) => (
-        <Tag color={type === 'CUSTOM' ? 'blue' : type === 'DYNAMIC' ? 'green' : 'orange'}>
-          {type}
+        <Tag color={type === 'custom' ? 'blue' : type === 'dynamic' ? 'green' : 'orange'}>
+          {type.toUpperCase()}
         </Tag>
       ),
     },
@@ -408,10 +410,10 @@ const SavedQueries: React.FC = () => {
               style={{ width: '100%' }}
             >
               <Option value="ALL">All Types</Option>
-              <Option value="CUSTOM">Custom</Option>
-              <Option value="USER">User</Option>
-              <Option value="TRANSACTION">Transaction</Option>
-              <Option value="DYNAMIC">Dynamic</Option>
+              <Option value="custom">Custom</Option>
+              <Option value="user">User</Option>
+              <Option value="transaction">Transaction</Option>
+              <Option value="dynamic">Dynamic</Option>
             </Select>
           </Col>
           <Col xs={12} sm={6} md={4} lg={3}>
@@ -513,10 +515,10 @@ const SavedQueries: React.FC = () => {
                 onChange={(value) => setFormData(prev => ({ ...prev, query_type: value }))}
                 style={{ width: '100%', marginTop: 8 }}
               >
-                <Option value="CUSTOM">Custom</Option>
-                <Option value="USER">User</Option>
-                <Option value="TRANSACTION">Transaction</Option>
-                <Option value="DYNAMIC">Dynamic</Option>
+                <Option value="custom">Custom</Option>
+                <Option value="user">User</Option>
+                <Option value="transaction">Transaction</Option>
+                <Option value="dynamic">Dynamic</Option>
               </Select>
             </Col>
             <Col span={8}>
@@ -590,8 +592,8 @@ const SavedQueries: React.FC = () => {
             
             <div>
               <Text strong>Query Type:</Text>
-              <Tag color={selectedQuery.query_type === 'CUSTOM' ? 'blue' : 'green'} style={{ marginLeft: 8 }}>
-                {selectedQuery.query_type}
+              <Tag color={selectedQuery.query_type === 'custom' ? 'blue' : 'green'} style={{ marginLeft: 8 }}>
+                {selectedQuery.query_type.toUpperCase()}
               </Tag>
             </div>
 

@@ -75,11 +75,12 @@ class QueryRequest(BaseSchema):
 class QueryResponse(BaseSchema):
     """统一的查询响应模型"""
     
-    data: List[Dict[str, Any]] = Field(description="查询结果")
+    data: Union[List[Dict[str, Any]], List[Dict[str, Union[List[Dict[str, Any]], List[str], int]]]] = Field(description="查询结果或多结果集")
     columns: List[str] = Field(description="列名列表")
-    total: int = Field(description="总记录数")
+    total: int = Field(description="总记录数或结果集数量")
     execution_time: Optional[float] = Field(default=None, description="执行时间(秒)")
     sql: Optional[str] = Field(default=None, description="实际执行的SQL")
+    is_multiple: Optional[bool] = Field(default=False, description="是否为多结果集")
 
 
 class QueryParameter(BaseSchema):

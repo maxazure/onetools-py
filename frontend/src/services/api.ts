@@ -223,16 +223,16 @@ class ApiService {
     return response.data;
   }
 
-  async saveQuery(query: string, name: string, description?: string): Promise<ApiResponse> {
+  async saveQuery(queryData: any): Promise<ApiResponse> {
     const response = await this.client.post('/api/v1/query-history/saved', {
-      sql: query,
-      name: name,
-      description: description || '',
-      query_type: 'custom',
-      params: {},
-      is_public: false,
-      tags: [],
-      is_favorite: false,
+      sql: queryData.sql,
+      name: queryData.name,
+      description: queryData.description || '',
+      query_type: queryData.query_type || 'custom',
+      params: queryData.params || {},
+      is_public: queryData.is_public || false,
+      tags: queryData.tags || [],
+      is_favorite: queryData.is_favorite || false,
       user_id: 'system'
     });
     return response.data;
@@ -243,11 +243,16 @@ class ApiService {
     return response.data;
   }
 
-  async updateSavedQuery(queryId: number, query: string, name: string): Promise<ApiResponse> {
+  async updateSavedQuery(queryId: number, queryData: any): Promise<ApiResponse> {
     const response = await this.client.put(`/api/v1/query-history/saved/${queryId}`, {
-      sql: query,
-      name: name,
-      query_type: 'custom',
+      sql: queryData.sql,
+      name: queryData.name,
+      description: queryData.description || '',
+      query_type: queryData.query_type || 'custom',
+      params: queryData.params || {},
+      is_public: queryData.is_public || false,
+      tags: queryData.tags || [],
+      is_favorite: queryData.is_favorite || false
     });
     return response.data;
   }
@@ -384,9 +389,9 @@ export const queryHistoryApi = {
   getQueryHistory: (page?: number, pageSize?: number) => apiService.getQueryHistory(page, pageSize),
   clearQueryHistory: () => apiService.clearQueryHistory(),
   getSavedQueries: () => apiService.getSavedQueries(),
-  saveQuery: (query: string, name: string, description?: string) => apiService.saveQuery(query, name, description),
+  saveQuery: (queryData: any) => apiService.saveQuery(queryData),
   getSavedQuery: (queryId: number) => apiService.getSavedQuery(queryId),
-  updateSavedQuery: (queryId: number, query: string, name: string) => apiService.updateSavedQuery(queryId, query, name),
+  updateSavedQuery: (queryId: number, queryData: any) => apiService.updateSavedQuery(queryId, queryData),
   deleteSavedQuery: (queryId: number) => apiService.deleteSavedQuery(queryId),
   getQueryStats: () => apiService.getQueryStats(),
 };

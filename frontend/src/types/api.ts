@@ -30,7 +30,7 @@ export interface PaginatedResponse<T = any> {
 }
 
 // Query types
-export type QueryType = 'CUSTOM' | 'DYNAMIC';
+export type QueryType = 'custom' | 'dynamic' | 'user' | 'transaction';
 
 export interface QueryRequest {
   query_type: QueryType;
@@ -80,6 +80,21 @@ export interface QueryResult {
   total_count: number;
   execution_time: number;
   query_id?: string;
+  is_multiple?: boolean;
+}
+
+// Multiple result sets
+export interface MultipleQueryResult {
+  results: Array<{
+    type: 'resultset' | 'rowcount';
+    index: number;
+    columns: string[];
+    data: Record<string, any>[];
+    total: number;
+    message: string;
+  }>;
+  execution_time: number;
+  is_multiple: true;
 }
 
 // Settings types

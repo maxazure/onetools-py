@@ -213,6 +213,96 @@ class SQLServerQueryManager(LoggerMixin):
         
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, sync_execute_raw)
+
+    async def execute_multiple_statements_with_connection(
+        self,
+        connection_string: str,
+        query: str,
+        parameters: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """使用指定连接字符串执行多条SQL查询并返回所有结果
+        
+        根据ODBC官方文档，每条语句可能返回：
+        1. 结果集（Result Sets）：SELECT、系统目录函数或某些存储过程
+        2. 影响行数（Row Counts）：INSERT、UPDATE、DELETE等修改语句
+        """
+        import pyodbc
+        
+        def sync_execute_multiple():
+            conn = pyodbc.connect(connection_string)
+            cursor = conn.cursor()
+            
+            try:
+                if parameters:
+                    cursor.execute(query, parameters)
+                else:
+                    cursor.execute(query)
+                
+                results = []
+                result_index = 0
+                
+                # 处理第一个结果
+                result_index += 1
+                if cursor.description:
+                    # 这是一个结果集（SELECT等）
+                    columns = [column[0] for column in cursor.description]
+                    rows = cursor.fetchall()
+                    data = [dict(zip(columns, row)) for row in rows]
+                    results.append({
+                        'type': 'resultset',
+                        'index': result_index,
+                        'columns': columns,
+                        'data': data,
+                        'total': len(data),
+                        'message': f'查询结果集 {result_index}'
+                    })
+                else:
+                    # 这是一个行数结果（INSERT/UPDATE/DELETE等）
+                    row_count = cursor.rowcount
+                    results.append({
+                        'type': 'rowcount',
+                        'index': result_index,
+                        'columns': ['affected_rows'],
+                        'data': [{'affected_rows': row_count}],
+                        'total': 1,
+                        'message': f'影响 {row_count} 行'
+                    })
+                
+                # 处理后续结果（使用nextset()遍历）
+                while cursor.nextset():
+                    result_index += 1
+                    if cursor.description:
+                        # 结果集
+                        columns = [column[0] for column in cursor.description]
+                        rows = cursor.fetchall()
+                        data = [dict(zip(columns, row)) for row in rows]
+                        results.append({
+                            'type': 'resultset',
+                            'index': result_index,
+                            'columns': columns,
+                            'data': data,
+                            'total': len(data),
+                            'message': f'查询结果集 {result_index}'
+                        })
+                    else:
+                        # 行数结果
+                        row_count = cursor.rowcount
+                        results.append({
+                            'type': 'rowcount',
+                            'index': result_index,
+                            'columns': ['affected_rows'],
+                            'data': [{'affected_rows': row_count}],
+                            'total': 1,
+                            'message': f'影响 {row_count} 行'
+                        })
+                
+                return results
+            finally:
+                cursor.close()
+                conn.close()
+        
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, sync_execute_multiple)
     
     async def execute_query_with_server(
         self,
@@ -223,6 +313,16 @@ class SQLServerQueryManager(LoggerMixin):
         """使用指定服务器执行SQL查询"""
         connection_string = self.generate_connection_string(server_name)
         return await self.execute_raw_sql_with_connection(connection_string, query, parameters)
+
+    async def execute_multiple_statements_with_server(
+        self,
+        server_name: str,
+        query: str,
+        parameters: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """使用指定服务器执行多条SQL查询并返回所有结果集"""
+        connection_string = self.generate_connection_string(server_name)
+        return await self.execute_multiple_statements_with_connection(connection_string, query, parameters)
     
     async def test_server_connection(self, server_name: str) -> bool:
         """测试指定服务器的连接"""

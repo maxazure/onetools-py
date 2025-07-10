@@ -26,8 +26,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
 import SqlEditor from '../../components/SqlEditor/SqlEditor';
 import QueryResults from '../../components/QueryResults/QueryResults';
+import MultipleQueryResults from '../../components/MultipleQueryResults/MultipleQueryResults';
 import { apiService } from '../../services/api';
-import { CustomQueryRequest, QueryResult } from '../../types/api';
+import { CustomQueryRequest, QueryResult, MultipleQueryResult } from '../../types/api';
 import { useDatabaseContext } from '../../contexts/DatabaseContext';
 
 const { Title, Text } = Typography;
@@ -35,7 +36,7 @@ const { TextArea } = Input;
 
 const CustomQuery: React.FC = () => {
   const [sqlQuery, setSqlQuery] = useState('');
-  const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
+  const [queryResult, setQueryResult] = useState<QueryResult | MultipleQueryResult | null>(null);
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [queryName, setQueryName] = useState('');
   const [queryDescription, setQueryDescription] = useState('');
@@ -95,14 +96,48 @@ const CustomQuery: React.FC = () => {
     retry: false, // 禁用重试以防止重复执行SQL操作（特别是INSERT/UPDATE/DELETE）
     onSuccess: (response) => {
       if (response.success && response.data) {
-        const result: QueryResult = {
-          columns: response.data.columns || [],
-          data: response.data.data || [],
-          total_count: response.data.total || 0,
-          execution_time: response.data.execution_time || 0,
-        };
-        setQueryResult(result);
-        message.success(`Query executed successfully! Found ${result.total_count} rows.`);
+        // 检查是否为多结果集
+        if (response.data.is_multiple && Array.isArray(response.data.data)) {
+          const multipleResult: MultipleQueryResult = {
+            results: response.data.data.map((resultSet: any) => ({
+              type: resultSet.type || 'resultset',
+              index: resultSet.index || 1,
+              columns: resultSet.columns || [],
+              data: resultSet.data || [],
+              total: resultSet.total || 0,
+              message: resultSet.message || '',
+            })),
+            execution_time: response.data.execution_time || 0,
+            is_multiple: true,
+          };
+          setQueryResult(multipleResult);
+          
+          // 统计结果集和操作结果的数量
+          const resultSets = multipleResult.results.filter(r => r.type === 'resultset').length;
+          const operations = multipleResult.results.filter(r => r.type === 'rowcount').length;
+          
+          let successMsg = 'Query executed successfully!';
+          if (resultSets > 0 && operations > 0) {
+            successMsg += ` Found ${resultSets} result sets and ${operations} operations.`;
+          } else if (resultSets > 0) {
+            successMsg += ` Found ${resultSets} result sets.`;
+          } else if (operations > 0) {
+            successMsg += ` Completed ${operations} operations.`;
+          }
+          
+          message.success(successMsg);
+        } else {
+          // 单结果集
+          const result: QueryResult = {
+            columns: response.data.columns || [],
+            data: response.data.data || [],
+            total_count: response.data.total || 0,
+            execution_time: response.data.execution_time || 0,
+            is_multiple: false,
+          };
+          setQueryResult(result);
+          message.success(`Query executed successfully! Found ${result.total_count} rows.`);
+        }
       } else {
         message.error(response.message || 'Query execution failed');
       }
@@ -115,8 +150,8 @@ const CustomQuery: React.FC = () => {
 
   // Save query mutation
   const saveQueryMutation = useMutation({
-    mutationFn: ({ query, name, description }: { query: string; name: string; description?: string }) =>
-      apiService.saveQuery(query, name, description),
+    mutationFn: (queryData: any) =>
+      apiService.saveQuery(queryData),
     retry: false, // 禁用重试以防止重复保存
     onSuccess: () => {
       message.success('Query saved successfully!');
@@ -171,9 +206,14 @@ const CustomQuery: React.FC = () => {
     }
 
     saveQueryMutation.mutate({
-      query: sqlQuery,
+      sql: sqlQuery,
       name: queryName,
       description: queryDescription,
+      query_type: 'custom',
+      params: {},
+      is_public: false,
+      tags: [],
+      is_favorite: false
     });
   }, [sqlQuery, queryName, queryDescription, saveQueryMutation, message]);
 
@@ -240,7 +280,20 @@ const CustomQuery: React.FC = () => {
 
     // In a real implementation, this would call the export API
     // For now, we'll just show a message
-    message.info(`Exporting ${queryResult.data.length} rows as ${format.toUpperCase()}...`);
+    if ('is_multiple' in queryResult && queryResult.is_multiple) {
+      const multipleResult = queryResult as MultipleQueryResult;
+      const resultSets = multipleResult.results.filter(r => r.type === 'resultset');
+      const totalRows = resultSets.reduce((sum: number, result) => sum + result.total, 0);
+      
+      if (resultSets.length > 0) {
+        message.info(`Exporting ${resultSets.length} result sets (${totalRows} total rows) as ${format.toUpperCase()}...`);
+      } else {
+        message.info('No data available for export (only operation results)');
+      }
+    } else {
+      const singleResult = queryResult as QueryResult;
+      message.info(`Exporting ${singleResult.data.length} rows as ${format.toUpperCase()}...`);
+    }
   }, [queryResult, message]);
 
 
@@ -281,13 +334,23 @@ const CustomQuery: React.FC = () => {
 
       {/* 查询结果区域 */}
       <div style={{ flex: 1, minHeight: 0 }}>
-        <QueryResults
-          data={queryResult}
-          loading={executeQueryMutation.isPending}
-          error={executeQueryMutation.error?.error_message || null}
-          onExport={handleExport}
-          onRefresh={handleExecuteQuery}
-        />
+        {queryResult && 'is_multiple' in queryResult && queryResult.is_multiple ? (
+          <MultipleQueryResults
+            data={queryResult as MultipleQueryResult}
+            loading={executeQueryMutation.isPending}
+            error={executeQueryMutation.error?.error_message || null}
+            onExport={handleExport}
+            onRefresh={handleExecuteQuery}
+          />
+        ) : (
+          <QueryResults
+            data={queryResult as QueryResult}
+            loading={executeQueryMutation.isPending}
+            error={executeQueryMutation.error?.error_message || null}
+            onExport={handleExport}
+            onRefresh={handleExecuteQuery}
+          />
+        )}
       </div>
 
       {/* Save Query Modal */}
