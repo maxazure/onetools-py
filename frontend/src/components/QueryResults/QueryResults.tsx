@@ -22,6 +22,7 @@ import {
   InfoCircleOutlined,
 } from '@ant-design/icons';
 import { QueryResult } from '../../types/api';
+import VirtualTable from '../VirtualTable/VirtualTable';
 
 const { Title, Text } = Typography;
 
@@ -159,68 +160,13 @@ const QueryResults: React.FC<QueryResultsProps> = ({
             </Col>
           </Row>
 
-          {/* Simple HTML Table */}
-          <div style={{ 
-            maxHeight: '400px', 
-            overflow: 'auto', 
-            border: '1px solid #d9d9d9',
-            borderRadius: '6px'
-          }}>
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '20px' }}>
-                <Spin /> 加载中...
-              </div>
-            ) : data?.data && data.data.length > 0 ? (
-              <table style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: '12px'
-              }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#fafafa' }}>
-                    {data.columns.map((column, index) => (
-                      <th key={index} style={{
-                        padding: '8px 12px',
-                        textAlign: 'left',
-                        borderBottom: '1px solid #d9d9d9',
-                        fontWeight: 600,
-                        position: 'sticky',
-                        top: 0,
-                        backgroundColor: '#fafafa',
-                        zIndex: 1
-                      }}>
-                        {column}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.data.map((row, rowIndex) => (
-                    <tr key={rowIndex} style={{
-                      backgroundColor: rowIndex % 2 === 0 ? '#ffffff' : '#fafafa'
-                    }}>
-                      {data.columns.map((column, colIndex) => (
-                        <td key={colIndex} style={{
-                          padding: '6px 12px',
-                          borderBottom: '1px solid #f0f0f0',
-                          maxWidth: '200px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {String(row[column] || '')}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <Text type="secondary">暂无数据</Text>
-              </div>
-            )}
-          </div>
+          {/* High Performance Virtual Table */}
+          <VirtualTable
+            data={data?.data || []}
+            columns={data?.columns || []}
+            height={400}
+            loading={loading}
+          />
 
           {/* Footer info */}
           <div style={{ marginTop: 16, textAlign: 'right' }}>

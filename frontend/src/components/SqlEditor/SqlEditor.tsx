@@ -2,7 +2,7 @@
  * SQL Editor Component using Monaco Editor
  */
 
-import React, { useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useCallback, useMemo } from 'react';
 import { Editor, OnMount } from '@monaco-editor/react';
 import { Button, Space, Tooltip, Typography } from 'antd';
 import { PlayCircleOutlined, SaveOutlined, FormatPainterOutlined, ClearOutlined } from '@ant-design/icons';
@@ -196,11 +196,6 @@ const SqlEditor: React.FC<SqlEditorProps> = ({
           </Tooltip>
         </Space>
         
-        <div style={{ float: 'right' }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            Lines: {value.split('\n').length} | Characters: {value.length}
-          </Text>
-        </div>
       </div>
       
       <Editor
@@ -216,28 +211,30 @@ const SqlEditor: React.FC<SqlEditorProps> = ({
           scrollBeyondLastLine: false,
           fontSize: 14,
           lineNumbers: 'on',
-          renderWhitespace: 'selection',
-          automaticLayout: true, // Enable automatic layout
+          renderWhitespace: 'none', // 减少渲染
+          automaticLayout: true,
           wordWrap: 'on',
-          folding: true,
+          folding: false, // 禁用代码折叠减少渲染开销
           selectOnLineNumbers: true,
-          matchBrackets: 'always',
-          autoIndent: 'full',
-          formatOnPaste: true,
-          formatOnType: true,
-          suggestOnTriggerCharacters: true,
-          acceptSuggestionOnEnter: 'on',
-          snippetSuggestions: 'inline',
-          quickSuggestions: {
-            other: true,
-            comments: false,
-            strings: false,
-          },
-          // Add explicit dimensions handling
+          matchBrackets: 'never', // 禁用括号匹配减少计算
+          autoIndent: 'none', // 禁用自动缩进
+          formatOnPaste: false, // 禁用粘贴时格式化
+          formatOnType: false, // 禁用输入时格式化
+          suggestOnTriggerCharacters: false, // 禁用自动建议
+          acceptSuggestionOnEnter: 'off',
+          snippetSuggestions: 'none',
+          quickSuggestions: false, // 完全禁用快速建议
+          hover: { enabled: false }, // 禁用悬停提示
+          occurrencesHighlight: false, // 禁用occurrence高亮
+          selectionHighlight: false, // 禁用选择高亮
+          renderLineHighlight: 'none', // 禁用行高亮
+          smoothScrolling: false, // 禁用平滑滚动
+          // 滚动条优化
           scrollbar: {
-            verticalScrollbarSize: 10,
-            horizontalScrollbarSize: 10,
+            verticalScrollbarSize: 8,
+            horizontalScrollbarSize: 8,
             useShadows: false,
+            alwaysConsumeMouseWheel: false
           },
         }}
       />
