@@ -2,13 +2,11 @@
  * Query Results Component
  */
 
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import {
-  Table,
   Card,
   Space,
   Button,
-  Pagination,
   Typography,
   Alert,
   Spin,
@@ -23,7 +21,6 @@ import {
   ReloadOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
 import { QueryResult } from '../../types/api';
 
 const { Title, Text } = Typography;
@@ -34,12 +31,6 @@ interface QueryResultsProps {
   error?: string | null;
   onExport?: (format: 'csv' | 'excel') => void;
   onRefresh?: () => void;
-  pagination?: {
-    current: number;
-    pageSize: number;
-    total: number;
-    onChange: (page: number, pageSize: number) => void;
-  };
 }
 
 const QueryResults: React.FC<QueryResultsProps> = ({
@@ -48,34 +39,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({
   error = null,
   onExport,
   onRefresh,
-  pagination,
 }) => {
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-
-  // Generate table columns from data
-  const columns: ColumnsType<any> = useMemo(() => {
-    if (!data?.columns) return [];
-
-    return data.columns.map((column) => ({
-      title: column,
-      dataIndex: column,
-      key: column,
-      width: 150,
-      ellipsis: {
-        showTitle: false,
-      },
-      render: (value: any) => <span>{String(value)}</span>,
-    }));
-  }, [data?.columns]);
-
-  // Add row keys to data
-  const tableData = useMemo(() => {
-    if (!data?.data) return [];
-    return data.data.map((row, index) => ({
-      ...row,
-      key: index,
-    }));
-  }, [data?.data]);
 
   const handleCopyToClipboard = async () => {
     if (!data?.data || data.data.length === 0) {
@@ -98,17 +62,6 @@ const QueryResults: React.FC<QueryResultsProps> = ({
     }
   };
 
-  const handleSelectChange = (newSelectedRowKeys: React.Key[]) => {
-    setSelectedRowKeys(newSelectedRowKeys);
-  };
-
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: handleSelectChange,
-    getCheckboxProps: (record: any) => ({
-      disabled: false,
-    }),
-  };
 
   if (error) {
     return (
@@ -183,20 +136,20 @@ const QueryResults: React.FC<QueryResultsProps> = ({
         <>
           {/* Statistics */}
           <Row gutter={16} style={{ marginBottom: 16 }}>
-            <Col span={6}>
+            <Col span={8}>
               <Statistic
                 title="记录数"
                 value={data.total_count}
                 formatter={(value) => value?.toLocaleString()}
               />
             </Col>
-            <Col span={6}>
+            <Col span={8}>
               <Statistic
                 title="列数"
                 value={data.columns.length}
               />
             </Col>
-            <Col span={6}>
+            <Col span={8}>
               <Statistic
                 title="执行时间"
                 value={data.execution_time}
@@ -204,41 +157,70 @@ const QueryResults: React.FC<QueryResultsProps> = ({
                 precision={2}
               />
             </Col>
-            <Col span={6}>
-              <Statistic
-                title="已选择"
-                value={selectedRowKeys.length}
-              />
-            </Col>
           </Row>
 
-          {/* Table */}
-          <Table
-            columns={columns}
-            dataSource={tableData}
-            rowSelection={rowSelection}
-            loading={loading}
-            scroll={{ x: 'max-content', y: 400 }}
-            size="small"
-            pagination={
-              pagination
-                ? {
-                    current: pagination.current,
-                    pageSize: pagination.pageSize,
-                    total: pagination.total,
-                    onChange: pagination.onChange,
-                    showSizeChanger: true,
-                    showQuickJumper: true,
-                    showTotal: (total, range) =>
-                      `${range[0]}-${range[1]} of ${total} items`,
-                    pageSizeOptions: ['10', '20', '50', '100'],
-                  }
-                : false
-            }
-            locale={{
-              emptyText: loading ? '加载中...' : '暂无数据',
-            }}
-          />
+          {/* Simple HTML Table */}
+          <div style={{ 
+            maxHeight: '400px', 
+            overflow: 'auto', 
+            border: '1px solid #d9d9d9',
+            borderRadius: '6px'
+          }}>
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <Spin /> 加载中...
+              </div>
+            ) : data?.data && data.data.length > 0 ? (
+              <table style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontSize: '12px'
+              }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#fafafa' }}>
+                    {data.columns.map((column, index) => (
+                      <th key={index} style={{
+                        padding: '8px 12px',
+                        textAlign: 'left',
+                        borderBottom: '1px solid #d9d9d9',
+                        fontWeight: 600,
+                        position: 'sticky',
+                        top: 0,
+                        backgroundColor: '#fafafa',
+                        zIndex: 1
+                      }}>
+                        {column}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.data.map((row, rowIndex) => (
+                    <tr key={rowIndex} style={{
+                      backgroundColor: rowIndex % 2 === 0 ? '#ffffff' : '#fafafa'
+                    }}>
+                      {data.columns.map((column, colIndex) => (
+                        <td key={colIndex} style={{
+                          padding: '6px 12px',
+                          borderBottom: '1px solid #f0f0f0',
+                          maxWidth: '200px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {String(row[column] || '')}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                <Text type="secondary">暂无数据</Text>
+              </div>
+            )}
+          </div>
 
           {/* Footer info */}
           <div style={{ marginTop: 16, textAlign: 'right' }}>
