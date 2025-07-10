@@ -52,11 +52,11 @@ def get_default_data():
                 "enabled": True
             },
             {
-                "key": "/user-query",
-                "label": "用户查询",
-                "icon": "UserOutlined",
-                "path": "/user-query",
-                "component": "UserQuery",
+                "key": "/query-forms",
+                "label": "查询表单",
+                "icon": "FormOutlined",
+                "path": "/query-forms",
+                "component": "QueryForms",
                 "position": "top",
                 "section": "main",
                 "order": 4,
@@ -146,6 +146,11 @@ def get_default_data():
                 "key": "ui.language",
                 "value": "zh-CN",
                 "description": "用户界面语言"
+            },
+            {
+                "key": "default_custom_query_sql",
+                "value": "SELECT TOP 100 * FROM OneToolsDb.dbo.Users ORDER BY Id DESC;",
+                "description": "自定义查询页面的默认SQL语句"
             }
         ]
     }
@@ -193,6 +198,40 @@ def create_tables(cursor):
             key TEXT NOT NULL UNIQUE,
             value TEXT,
             description TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # 创建保存的查询表
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS saved_queries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT,
+            query_type TEXT DEFAULT 'custom',
+            sql TEXT NOT NULL,
+            params TEXT DEFAULT '{}',
+            is_public BOOLEAN DEFAULT FALSE,
+            tags TEXT DEFAULT '[]',
+            is_favorite BOOLEAN DEFAULT FALSE,
+            user_id TEXT DEFAULT 'system',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # 创建查询历史表
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS query_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sql TEXT NOT NULL,
+            params TEXT DEFAULT '{}',
+            execution_time REAL,
+            row_count INTEGER,
+            success BOOLEAN NOT NULL,
+            error_message TEXT,
+            user_id TEXT DEFAULT 'system',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -337,7 +376,17 @@ def init_database_with_defaults(db_path=None, force=False):
         print("\n数据库初始化完成!")
         
         # 显示最终统计
-        check_existing_data(cursor)
+        final_menu_count, final_server_count, final_settings_count = check_existing_data(cursor)
+        
+        # 检查其他表
+        cursor.execute("SELECT COUNT(*) FROM saved_queries")
+        saved_queries_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM query_history")
+        query_history_count = cursor.fetchone()[0]
+        
+        print(f"  - 保存的查询: {saved_queries_count} 个")
+        print(f"  - 查询历史: {query_history_count} 个")
         
     except Exception as e:
         print(f"初始化数据库时发生错误: {e}")
