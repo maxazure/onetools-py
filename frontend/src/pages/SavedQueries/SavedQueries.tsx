@@ -2,7 +2,7 @@
  * Saved Queries Page
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Row,
   Col,
@@ -36,6 +36,7 @@ import {
   TagOutlined,
 } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import type { ColumnsType } from 'antd/es/table';
 import { SavedQuery, SavedQueryRequest, QueryType } from '../../types/api';
 import { queryHistoryApi } from '../../services/api';
@@ -70,9 +71,10 @@ const SavedQueries: React.FC = () => {
   const queryClient = useQueryClient();
   const { currentServer } = useDatabaseContext();
   const { message } = App.useApp();
+  const navigate = useNavigate();
 
   // Fetch saved queries
-  const { data: savedQueries, isLoading, error } = useQuery<SavedQuery[]>({
+  const { data: savedQueries, isLoading, error, refetch } = useQuery<SavedQuery[]>({
     queryKey: ['saved-queries'],
     queryFn: async () => {
       try {
@@ -95,8 +97,15 @@ const SavedQueries: React.FC = () => {
         return [];
       }
     },
-    staleTime: 5 * 60 * 1000, // 5分钟缓存
+    staleTime: 1 * 60 * 1000, // 减少缓存时间到1分钟
+    refetchOnMount: 'always', // 确保每次组件挂载时都重新获取数据
+    refetchOnWindowFocus: false, // 避免窗口获焦时重复加载
   });
+
+  // 强制在组件挂载时重新获取数据
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   // Create saved query mutation
   const createQueryMutation = useMutation({
@@ -192,10 +201,14 @@ const SavedQueries: React.FC = () => {
     }
     
     // Navigate to custom query page with the SQL pre-filled
-    // For now, we'll just copy the SQL to clipboard and show a message
-    navigator.clipboard.writeText(query.sql);
-    message.success('Query SQL copied to clipboard! Go to Custom Query page to execute it.');
-  }, [currentServer, message]);
+    navigate('/custom-query', { 
+      state: { 
+        sql: query.sql,
+        name: query.name,
+        queryId: query.id 
+      } 
+    });
+  }, [currentServer, message, navigate]);
 
   // Handle delete query
   const handleDeleteQuery = useCallback((queryId: number) => {
@@ -558,6 +571,7 @@ const SavedQueries: React.FC = () => {
             Edit
           </Button>,
           <Button key="execute" type="primary" icon={<PlayCircleOutlined />} onClick={() => {
+            setViewModalVisible(false);
             handleExecuteQuery(selectedQuery!);
           }}>
             Execute

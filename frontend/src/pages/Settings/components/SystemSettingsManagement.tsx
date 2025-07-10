@@ -71,6 +71,7 @@ const SETTING_TYPES = [
 
 // 常用设置键建议
 const COMMON_SETTING_KEYS = [
+  'default_custom_query_sql',
   'app.name',
   'app.version',
   'app.debug',
@@ -244,6 +245,20 @@ const SystemSettingsManagement: React.FC = () => {
       setSettingType('string');
     }
     setIsModalVisible(true);
+  };
+
+  // 处理预设设置键的点击
+  const handlePresetKeyClick = (key: string) => {
+    form.setFieldsValue({ key });
+    
+    // 为特定键设置预设值和描述
+    if (key === 'default_custom_query_sql') {
+      form.setFieldsValue({
+        key,
+        value: 'SELECT * FROM OneToolsDb.dbo.Users;',
+        description: 'Custom Query页面的默认SQL查询语句，用户可以修改此语句作为页面初始显示的SQL'
+      });
+    }
   };
 
   // 格式化设置值显示
@@ -569,7 +584,8 @@ const SystemSettingsManagement: React.FC = () => {
                       <Tag
                         key={key}
                         style={{ cursor: 'pointer', marginBottom: 4 }}
-                        onClick={() => form.setFieldsValue({ key })}
+                        onClick={() => handlePresetKeyClick(key)}
+                        color={key === 'default_custom_query_sql' ? 'blue' : 'default'}
                       >
                         {key}
                       </Tag>

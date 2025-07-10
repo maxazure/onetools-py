@@ -293,6 +293,30 @@ class ApiService {
     return response.data;
   }
 
+  // System Settings API
+  async getSystemSetting(key: string): Promise<ApiResponse> {
+    const response = await this.client.get(`${API_CONFIG.ENDPOINTS.SETTINGS}/system/${key}`);
+    return response.data;
+  }
+
+  async setSystemSetting(key: string, value: string, description?: string): Promise<ApiResponse> {
+    const response = await this.client.post(`${API_CONFIG.ENDPOINTS.SETTINGS}/system`, {
+      key,
+      value,
+      description: description || ''
+    });
+    return response.data;
+  }
+
+  async getAllSystemSettings(): Promise<ApiResponse> {
+    const response = await this.client.get(`${API_CONFIG.ENDPOINTS.SETTINGS}/system`);
+    return response.data;
+  }
+
+  async deleteSystemSetting(key: string): Promise<ApiResponse> {
+    const response = await this.client.delete(`${API_CONFIG.ENDPOINTS.SETTINGS}/system/${key}`);
+    return response.data;
+  }
 
   async getMenuConfiguration(): Promise<ApiResponse> {
     const response = await this.client.get(`${API_CONFIG.ENDPOINTS.SETTINGS}/menu`);

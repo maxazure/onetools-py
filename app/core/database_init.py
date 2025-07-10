@@ -99,6 +99,9 @@ async def init_database():
         # 初始化默认数据库服务器配置
         await init_default_database_servers()
         
+        # 初始化系统设置
+        await init_default_system_settings()
+        
     except Exception as e:
         logger.error("Failed to initialize database", error=e)
         raise
@@ -188,4 +191,51 @@ async def init_default_database_servers():
         
     except Exception as e:
         logger.error("Failed to initialize default database server configurations", error=e)
+        raise
+
+
+async def init_default_system_settings():
+    """初始化默认系统设置"""
+    try:
+        sqlite_manager = get_sqlite_manager()
+        
+        # 检查是否已有系统设置
+        async with sqlite_manager.get_connection() as conn:
+            result = await conn.execute(text("SELECT COUNT(*) FROM system_settings"))
+            count = result.scalar()
+            
+            if count > 0:
+                logger.info("System settings already exist, skipping initialization")
+                return
+        
+        # 插入默认系统设置
+        default_settings = [
+            {
+                "key": "default_custom_query_sql",
+                "value": "SELECT * FROM OneToolsDb.dbo.Users;",
+                "description": "Custom Query页面的默认SQL查询语句，用户可以修改此语句作为页面初始显示的SQL"
+            },
+            {
+                "key": "app.name",
+                "value": "OneTools",
+                "description": "应用程序名称"
+            },
+            {
+                "key": "app.version",
+                "value": "2.0.0",
+                "description": "应用程序版本号"
+            }
+        ]
+        
+        async with sqlite_manager.get_connection() as conn:
+            for setting in default_settings:
+                await conn.execute(text("""
+                    INSERT INTO system_settings (key, value, description)
+                    VALUES (:key, :value, :description)
+                """), setting)
+        
+        logger.info("Default system settings initialized")
+        
+    except Exception as e:
+        logger.error("Failed to initialize default system settings", error=e)
         raise

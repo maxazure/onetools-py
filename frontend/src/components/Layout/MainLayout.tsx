@@ -263,10 +263,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             onServerChange={handleDatabaseServerChange}
             currentServer={currentServer}
           />
-          <Badge 
-            status="success" 
-            text={<Text style={{ color: '#fff', fontSize: '12px' }}>在线</Text>} 
-          />
         </div>
       </Header>
 

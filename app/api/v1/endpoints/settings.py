@@ -484,7 +484,7 @@ class SystemSettingRequest(BaseModel):
 async def get_system_setting(key: str):
     """获取系统设置"""
     try:
-        value = config_service.get_system_setting(key)
+        value = await config_service.get_system_setting_async(key)
         if value is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

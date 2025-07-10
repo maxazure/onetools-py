@@ -689,8 +689,8 @@ class ConfigService(LoggerMixin):
             # 检查是否已经在事件循环中
             try:
                 loop = asyncio.get_running_loop()
-                # 如果已经在事件循环中，返回默认值
-                self.log_info(f"Already in event loop, returning default value for key: {key}")
+                # 如果已经在事件循环中，需要使用异步方法
+                self.log_warning(f"Already in event loop for key: {key}, this should use async method")
                 return default_value
             except RuntimeError:
                 # 没有运行的事件循环，正常运行
@@ -698,6 +698,10 @@ class ConfigService(LoggerMixin):
         except Exception as e:
             self.log_error("Failed to get system setting", error=e, key=key)
             return default_value
+    
+    async def get_system_setting_async(self, key: str, default_value: Optional[str] = None) -> Optional[str]:
+        """异步获取系统设置值 - 供FastAPI直接调用"""
+        return await self._get_system_setting_async(key, default_value)
     
     async def _get_system_setting_async(self, key: str, default_value: Optional[str] = None) -> Optional[str]:
         """异步获取系统设置值"""

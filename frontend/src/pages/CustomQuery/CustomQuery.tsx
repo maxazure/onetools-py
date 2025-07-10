@@ -2,7 +2,7 @@
  * Custom Query Page
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Row,
   Col,
@@ -23,6 +23,7 @@ import {
   InfoCircleOutlined,
 } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import SqlEditor from '../../components/SqlEditor/SqlEditor';
 import QueryResults from '../../components/QueryResults/QueryResults';
 import { apiService } from '../../services/api';
@@ -33,7 +34,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 const CustomQuery: React.FC = () => {
-  const [sqlQuery, setSqlQuery] = useState('SELECT * FROM OneToolsDb.dbo.Users;');
+  const [sqlQuery, setSqlQuery] = useState('');
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [queryName, setQueryName] = useState('');
@@ -42,6 +43,71 @@ const CustomQuery: React.FC = () => {
   const queryClient = useQueryClient();
   const { currentServer } = useDatabaseContext();
   const { message } = App.useApp();
+  const location = useLocation();
+
+  // Fetch default SQL from system settings
+  const { data: defaultSqlSetting, isLoading: isLoadingSettings, error: settingsError } = useQuery({
+    queryKey: ['system-setting', 'default_custom_query_sql'],
+    queryFn: async () => {
+      try {
+        console.log('Fetching default SQL setting...');
+        const response = await apiService.getSystemSetting('default_custom_query_sql');
+        console.log('Default SQL setting response:', response);
+        
+        if (response.success && response.data?.value) {
+          console.log('Found default SQL setting:', response.data.value);
+          return response.data.value;
+        } else {
+          console.log('No default SQL setting found, using fallback');
+          return 'SELECT * FROM OneToolsDb.dbo.Users;';
+        }
+      } catch (error) {
+        console.log('Error fetching default SQL setting:', error);
+        return 'SELECT * FROM OneToolsDb.dbo.Users;';
+      }
+    },
+    staleTime: 1 * 60 * 1000, // 减少到1分钟缓存
+    refetchOnMount: true, // 确保每次加载都重新获取
+  });
+
+  // Initialize SQL query with default setting
+  useEffect(() => {
+    console.log('defaultSqlSetting:', defaultSqlSetting, 'location.state?.sql:', location.state?.sql);
+    
+    // Always set the default SQL setting if available and no SQL from navigation
+    if (defaultSqlSetting && !location.state?.sql && !sqlQuery) {
+      console.log('Setting SQL query to default setting:', defaultSqlSetting);
+      setSqlQuery(defaultSqlSetting);
+    }
+    // Also update if the setting has changed and no navigation SQL
+    else if (defaultSqlSetting && !location.state?.sql && sqlQuery !== defaultSqlSetting) {
+      console.log('Updating SQL query to new default setting:', defaultSqlSetting);
+      setSqlQuery(defaultSqlSetting);
+    }
+  }, [defaultSqlSetting, location.state?.sql, sqlQuery]);
+
+  // Debug effect to log settings loading status
+  useEffect(() => {
+    console.log('Settings loading status:', {
+      isLoading: isLoadingSettings,
+      error: settingsError,
+      data: defaultSqlSetting
+    });
+  }, [isLoadingSettings, settingsError, defaultSqlSetting]);
+
+  // Handle incoming SQL from saved queries navigation
+  useEffect(() => {
+    if (location.state?.sql) {
+      setSqlQuery(location.state.sql);
+      
+      // Show success message indicating the query was loaded
+      const queryName = location.state.name || 'saved query';
+      message.success(`Loaded SQL from "${queryName}"`);
+      
+      // Clear the state to prevent reloading on subsequent renders
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, message]);
 
   // Execute query mutation
   const executeQueryMutation = useMutation({
@@ -160,6 +226,12 @@ const CustomQuery: React.FC = () => {
     message.info('Query cleared');
   }, [message]);
 
+  const handleReloadDefault = useCallback(() => {
+    // Force reload default SQL setting
+    queryClient.invalidateQueries({ queryKey: ['system-setting', 'default_custom_query_sql'] });
+    message.info('Reloading default SQL setting...');
+  }, [queryClient, message]);
+
   const handleExport = useCallback((format: 'csv' | 'excel') => {
     if (!queryResult) {
       message.warning('No data to export');
@@ -177,7 +249,19 @@ const CustomQuery: React.FC = () => {
       {/* SQL查询编辑器区域 */}
       <div style={{ marginBottom: '16px' }}>
         <Card 
-          title="SQL查询编辑器" 
+          title={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>SQL查询编辑器</span>
+              <Button 
+                size="small" 
+                type="link" 
+                onClick={handleReloadDefault}
+                loading={isLoadingSettings}
+              >
+                重新加载默认SQL
+              </Button>
+            </div>
+          }
           size="small"
           style={{ height: '320px' }}
           bodyStyle={{ height: '280px', padding: '16px' }}
