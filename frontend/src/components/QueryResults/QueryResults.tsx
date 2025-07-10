@@ -15,7 +15,6 @@ import {
   Statistic,
   Row,
   Col,
-  Tooltip,
   message,
 } from 'antd';
 import {
@@ -65,16 +64,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({
       ellipsis: {
         showTitle: false,
       },
-      render: (value: any) => (
-        <Tooltip title={String(value)} placement="topLeft">
-          <span>{String(value)}</span>
-        </Tooltip>
-      ),
-      sorter: (a: any, b: any) => {
-        const aVal = String(a[column] || '');
-        const bVal = String(b[column] || '');
-        return aVal.localeCompare(bVal);
-      },
+      render: (value: any) => <span>{String(value)}</span>,
     }));
   }, [data?.columns]);
 
