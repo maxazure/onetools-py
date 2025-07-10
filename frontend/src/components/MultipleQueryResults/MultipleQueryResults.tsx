@@ -35,6 +35,7 @@ interface MultipleQueryResultsProps {
   error?: string | null;
   onExport?: (format: 'csv' | 'excel') => void;
   onRefresh?: () => void;
+  sqlQuery?: string; // 添加SQL查询语句
 }
 
 const MultipleQueryResults: React.FC<MultipleQueryResultsProps> = ({
@@ -43,6 +44,7 @@ const MultipleQueryResults: React.FC<MultipleQueryResultsProps> = ({
   error = null,
   onExport,
   onRefresh,
+  sqlQuery,
 }) => {
 
   const handleCopyToClipboard = async (resultIndex: number) => {
@@ -69,6 +71,54 @@ const MultipleQueryResults: React.FC<MultipleQueryResultsProps> = ({
       message.success(`Data from Result Set ${resultIndex + 1} copied to clipboard`);
     } catch (err) {
       message.error('Failed to copy data');
+    }
+  };
+
+  const handleCopyAllResults = async () => {
+    if (!data?.results || data.results.length === 0) {
+      message.warning('No data to copy');
+      return;
+    }
+
+    try {
+      let allContent = '';
+      
+      // 添加SQL查询语句
+      if (sqlQuery) {
+        allContent += `-- SQL Query:\n${sqlQuery}\n\n`;
+      }
+      
+      // 遍历所有结果集
+      data.results.forEach((result, index) => {
+        if (result.type === 'resultset' && result.data && result.data.length > 0) {
+          allContent += `-- Result Set ${result.index} (${result.total} rows)\n`;
+          
+          // 添加表头
+          const headers = result.columns.join('\t');
+          allContent += headers + '\n';
+          
+          // 添加数据行
+          const rows = result.data.map(row => 
+            result.columns.map(col => String(row[col] || '')).join('\t')
+          ).join('\n');
+          allContent += rows + '\n';
+          
+          // 如果不是最后一个结果集，添加分隔符
+          if (index < data.results.length - 1) {
+            allContent += '\n' + '='.repeat(50) + '\n\n';
+          }
+        } else if (result.type === 'rowcount') {
+          allContent += `-- ${result.message}\n`;
+          if (index < data.results.length - 1) {
+            allContent += '\n';
+          }
+        }
+      });
+
+      await navigator.clipboard.writeText(allContent);
+      message.success(`All result sets (${data.results.length}) copied to clipboard`);
+    } catch (err) {
+      message.error('Failed to copy all results');
     }
   };
 
@@ -113,16 +163,28 @@ const MultipleQueryResults: React.FC<MultipleQueryResultsProps> = ({
         </Space>
       }
       extra={
-        onRefresh && (
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={onRefresh}
-            loading={loading}
-            size="small"
-          >
-            刷新
-          </Button>
-        )
+        <Space>
+          {data && data.results && data.results.length > 0 && (
+            <Button
+              icon={<CopyOutlined />}
+              onClick={handleCopyAllResults}
+              size="small"
+              type="primary"
+            >
+              复制全部结果集
+            </Button>
+          )}
+          {onRefresh && (
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={onRefresh}
+              loading={loading}
+              size="small"
+            >
+              刷新
+            </Button>
+          )}
+        </Space>
       }
     >
       {data && data.results && data.results.length > 0 ? (

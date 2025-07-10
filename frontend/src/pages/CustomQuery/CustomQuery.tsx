@@ -376,6 +376,7 @@ const CustomQuery: React.FC = () => {
             error={executeQueryMutation.error?.error_message || null}
             onExport={handleExport}
             onRefresh={handleExecuteQuery}
+            sqlQuery={sqlQuery}
           />
         ) : (
           <QueryResults

@@ -31,7 +31,6 @@ import {
   HistoryOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons';
-import moment from 'moment';
 
 import { useDatabaseContext } from '../contexts/DatabaseContext';
 
@@ -554,6 +553,7 @@ const DynamicForm: React.FC<DynamicFormProps> = ({
               onRefresh={() => {
                 message.info('刷新功能待实现');
               }}
+              sqlQuery={form.sql_template}
             />
           ) : (
             <QueryResults
