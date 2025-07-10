@@ -22,7 +22,7 @@ echo Waiting for API to start...
 timeout /t 5 >nul
 
 echo [2/3] Testing API Connection...
-curl -X GET "http://192.168.31.129:15008/health" --max-time 5 --silent --fail >nul
+curl -X GET "http://localhost:15008/health" --max-time 5 --silent --fail >nul
 if %errorlevel% neq 0 (
     echo WARNING: API health check failed, but continuing...
 ) else (
@@ -59,8 +59,8 @@ echo ===================================================
 echo              🚀 OneTools is Starting! 🚀
 echo ===================================================
 echo.
-echo Python API:      http://192.168.31.129:15008
-echo API Documentation: http://192.168.31.129:15008/api/docs  
+echo Python API:      http://localhost:15008
+echo API Documentation: http://localhost:15008/api/docs  
 echo React Frontend:  http://localhost:3000 (starting...)
 echo Test Interface: Open test_integration.html in browser
 echo.

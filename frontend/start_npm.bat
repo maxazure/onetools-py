@@ -21,7 +21,7 @@ echo.
 
 echo Starting React development server with npm...
 echo Frontend will be available at: http://localhost:3000
-echo API configured for: http://192.168.31.129:15008
+echo API configured for: http://localhost:15008
 echo.
 echo Press Ctrl+C to stop the server
 echo.
