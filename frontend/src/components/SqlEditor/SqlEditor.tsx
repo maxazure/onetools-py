@@ -5,8 +5,7 @@
 import React, { useRef, useCallback, useMemo } from 'react';
 import { Editor, OnMount } from '@monaco-editor/react';
 import { Button, Space, Tooltip, Typography } from 'antd';
-import { PlayCircleOutlined, SaveOutlined, FormatPainterOutlined, ClearOutlined } from '@ant-design/icons';
-// Monaco types are provided by @monaco-editor/react
+import { PlayCircleOutlined, SaveOutlined, FormatPainterOutlined, ClearOutlined, DatabaseOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
 
@@ -17,9 +16,11 @@ interface SqlEditorProps {
   onSave?: () => void;
   onFormat?: () => void;
   onClear?: () => void;
+  onAnalyzeSchema?: () => void;
   height?: string | number;
   readOnly?: boolean;
   loading?: boolean;
+  analyzingSchema?: boolean;
   theme?: 'light' | 'dark';
 }
 
@@ -30,9 +31,11 @@ const SqlEditor: React.FC<SqlEditorProps> = ({
   onSave,
   onFormat,
   onClear,
+  onAnalyzeSchema,
   height = 300,
   readOnly = false,
   loading = false,
+  analyzingSchema = false,
   theme = 'light',
 }) => {
   const editorRef = useRef<any>(null);
@@ -68,7 +71,7 @@ const SqlEditor: React.FC<SqlEditorProps> = ({
 
     // Add SQL keywords and completion
     monaco.languages.registerCompletionItemProvider('sql', {
-      provideCompletionItems: (model, position) => {
+      provideCompletionItems: (model: any, position: any) => {
         const word = model.getWordUntilPosition(position);
         const range = {
           startLineNumber: position.lineNumber,
@@ -194,6 +197,19 @@ const SqlEditor: React.FC<SqlEditorProps> = ({
               清空
             </Button>
           </Tooltip>
+          
+          {onAnalyzeSchema && (
+            <Tooltip title="分析SQL中的表结构并生成CREATE语句">
+              <Button
+                icon={<DatabaseOutlined />}
+                onClick={onAnalyzeSchema}
+                loading={analyzingSchema}
+                disabled={readOnly || !value.trim()}
+              >
+                分析表结构
+              </Button>
+            </Tooltip>
+          )}
         </Space>
         
       </div>

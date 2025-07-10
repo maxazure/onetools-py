@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from app.api.deps import get_query_service_dep
 from app.services.query_service import get_query_service
+from app.utils.schema_analyzer import get_schema_analyzer
 from app.core.logging import get_logger
 from app.models.schemas import ApiResponse, QueryRequest, QueryResponse, QueryType
 from app.services.query_service import QueryService
@@ -31,6 +32,12 @@ class SaveQueryRequest(BaseModel):
     name: str
     sql: str
     description: str = ""
+
+
+class SchemaAnalysisRequest(BaseModel):
+    """表结构分析请求"""
+    sql: str
+    server_name: Optional[str] = None
 
 
 @router.post(
@@ -212,4 +219,65 @@ async def get_custom_query_parameters():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"获取查询参数失败: {str(e)}"
+        )
+
+
+@router.post(
+    "/analyze-schema",
+    response_model=ApiResponse[Dict[str, Any]],
+    summary="分析SQL语句中的表结构",
+    description="分析SQL语句中包含的所有表和视图的结构信息，支持视图递归分析"
+)
+async def analyze_sql_schema(
+    analysis_request: SchemaAnalysisRequest
+):
+    """分析SQL语句中的表结构"""
+    try:
+        # 验证SQL查询
+        if not analysis_request.sql or not analysis_request.sql.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="SQL查询不能为空"
+            )
+        
+        logger.info(f"开始分析SQL表结构", sql=analysis_request.sql[:100], server=analysis_request.server_name)
+        
+        # 使用表结构分析器
+        query_service = get_query_service()
+        analyzer = get_schema_analyzer(query_service)
+        schema_create_statements = await analyzer.analyze_sql_schema(
+            analysis_request.sql,
+            analysis_request.server_name
+        )
+        
+        # 获取分析的表名列表
+        table_names = analyzer.extract_table_names(analysis_request.sql)
+        
+        # 构建响应数据
+        response_data = {
+            "sql": analysis_request.sql,
+            "server_name": analysis_request.server_name,
+            "tables_found": list(table_names),
+            "create_statements": schema_create_statements,
+            "table_count": len(table_names)
+        }
+        
+        return ApiResponse.success_response(
+            data=response_data,
+            message=f"表结构分析完成，发现 {len(table_names)} 个数据库对象"
+        )
+    
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logger.warning("表结构分析参数错误", error=e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error("表结构分析失败", error=e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"表结构分析失败: {str(e)}"
         )

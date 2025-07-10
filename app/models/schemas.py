@@ -38,6 +38,7 @@ class QueryType(str, Enum):
     """查询类型"""
     CUSTOM = "custom"      # 自定义SQL查询
     DYNAMIC = "dynamic"    # 动态表查询
+    FORM = "form"          # 动态表单查询
 
 
 class OperatorType(str, Enum):
@@ -332,6 +333,197 @@ class MsDatabaseConnectionTest(BaseSchema):
     
     server_name: str = Field(description="数据库服务器名称")
     database_name: Optional[str] = Field(default=None, description="数据库名称")
+
+
+# ===================== 动态查询表单相关模型 =====================
+
+class FieldType(str, Enum):
+    """表单字段类型"""
+    TEXT = "text"
+    NUMBER = "number"
+    EMAIL = "email"
+    DATE = "date"
+    DATETIME = "datetime"
+    SELECT = "select"
+    MULTISELECT = "multiselect"
+    CHECKBOX = "checkbox"
+    RADIO = "radio"
+    TEXTAREA = "textarea"
+
+
+class MatchType(str, Enum):
+    """匹配类型"""
+    EXACT = "exact"        # 精确匹配 (=)
+    LIKE = "like"          # 模糊匹配 (LIKE '%value%')
+    START_WITH = "start_with"  # 开头匹配 (LIKE 'value%')
+    END_WITH = "end_with"     # 结尾匹配 (LIKE '%value')
+    GREATER = "greater"       # 大于 (>)
+    GREATER_EQUAL = "greater_equal"  # 大于等于 (>=)
+    LESS = "less"            # 小于 (<)
+    LESS_EQUAL = "less_equal"  # 小于等于 (<=)
+    BETWEEN = "between"      # 区间 (BETWEEN)
+    IN_LIST = "in_list"      # 在列表中 (IN)
+
+
+class DataSourceType(str, Enum):
+    """数据源类型"""
+    STATIC = "static"      # 静态选项
+    SQL = "sql"           # SQL查询
+
+
+class QueryFormField(BaseSchema):
+    """查询表单字段配置"""
+    
+    parameter: str = Field(description="参数名 (如 @UserName)")
+    label: str = Field(description="显示标签")
+    field_type: FieldType = Field(description="字段类型")
+    required: bool = Field(default=False, description="是否必填")
+    default_value: Optional[str] = Field(default=None, description="默认值")
+    match_type: MatchType = Field(default=MatchType.EXACT, description="匹配类型")
+    placeholder: Optional[str] = Field(default=None, description="占位符")
+    help_text: Optional[str] = Field(default=None, description="帮助文本")
+    
+    # 验证规则
+    validation: Optional[Dict[str, Any]] = Field(default=None, description="验证规则")
+    
+    # 数据源配置 (用于select, multiselect, radio, checkbox)
+    data_source: Optional[Dict[str, Any]] = Field(default=None, description="数据源配置")
+    
+    # 布局配置
+    grid_span: Optional[int] = Field(default=1, description="网格跨度")
+    order: int = Field(default=0, description="排序")
+
+
+class QueryFormLayout(BaseSchema):
+    """查询表单布局配置"""
+    
+    columns: int = Field(default=3, description="列数")
+    button_position: str = Field(default="bottom", description="按钮位置 (bottom/right)")
+    label_width: Optional[str] = Field(default=None, description="标签宽度")
+    field_spacing: Optional[str] = Field(default="16px", description="字段间距")
+
+
+class QueryFormConfig(BaseSchema):
+    """查询表单完整配置"""
+    
+    title: str = Field(description="表单标题")
+    description: Optional[str] = Field(default=None, description="表单描述")
+    fields: List[QueryFormField] = Field(description="表单字段列表")
+    layout: QueryFormLayout = Field(default_factory=QueryFormLayout, description="布局配置")
+
+
+class QueryForm(BaseSchema, TimestampMixin):
+    """动态查询表单"""
+    
+    id: Optional[int] = Field(default=None, description="表单ID")
+    form_name: str = Field(description="表单名称", min_length=1, max_length=255)
+    form_description: Optional[str] = Field(default=None, description="表单描述")
+    sql_template: str = Field(description="SQL模板 (带@参数)")
+    form_config: QueryFormConfig = Field(description="表单配置")
+    target_database: Optional[str] = Field(default=None, description="目标数据库名")
+    is_active: bool = Field(default=True, description="是否激活")
+    created_by: str = Field(default="system", description="创建者")
+
+
+class QueryFormCreate(BaseSchema):
+    """创建查询表单请求"""
+    
+    form_name: str = Field(description="表单名称", min_length=1, max_length=255)
+    form_description: Optional[str] = Field(default=None, description="表单描述")
+    sql_template: str = Field(description="SQL模板 (带@参数)")
+    form_config: QueryFormConfig = Field(description="表单配置")
+    target_database: Optional[str] = Field(default=None, description="目标数据库名")
+    
+    @field_validator('form_name')
+    def validate_form_name(cls, v):
+        if not v.strip():
+            raise ValueError('表单名称不能为空')
+        return v.strip()
+    
+    @field_validator('sql_template')
+    def validate_sql_template(cls, v):
+        if not v.strip():
+            raise ValueError('SQL模板不能为空')
+        # 检查是否包含参数
+        if '@' not in v:
+            raise ValueError('SQL模板必须包含@参数')
+        return v.strip()
+
+
+class QueryFormUpdate(BaseSchema):
+    """更新查询表单请求"""
+    
+    form_name: Optional[str] = Field(default=None, description="表单名称")
+    form_description: Optional[str] = Field(default=None, description="表单描述")
+    sql_template: Optional[str] = Field(default=None, description="SQL模板")
+    form_config: Optional[QueryFormConfig] = Field(default=None, description="表单配置")
+    target_database: Optional[str] = Field(default=None, description="目标数据库名")
+    is_active: Optional[bool] = Field(default=None, description="是否激活")
+
+
+class QueryFormResponse(BaseSchema):
+    """查询表单响应"""
+    
+    id: int = Field(description="表单ID")
+    form_name: str = Field(description="表单名称")
+    form_description: Optional[str] = Field(description="表单描述")
+    sql_template: str = Field(description="SQL模板")
+    form_config: QueryFormConfig = Field(description="表单配置")
+    target_database: Optional[str] = Field(description="目标数据库名")
+    is_active: bool = Field(description="是否激活")
+    created_by: str = Field(description="创建者")
+    created_at: datetime = Field(description="创建时间")
+    updated_at: datetime = Field(description="更新时间")
+
+
+class QueryFormExecuteRequest(BaseSchema):
+    """执行动态表单查询请求"""
+    
+    form_id: int = Field(description="表单ID")
+    params: Dict[str, Any] = Field(default_factory=dict, description="查询参数")
+    server_name: Optional[str] = Field(default=None, description="服务器名称")
+    
+    @field_validator('params')
+    def clean_params(cls, v):
+        """清理参数，移除空值"""
+        return {k: val for k, val in v.items() if val is not None and str(val).strip()}
+
+
+class QueryFormHistory(BaseSchema, TimestampMixin):
+    """查询表单执行历史"""
+    
+    id: Optional[int] = Field(default=None, description="历史ID")
+    form_id: int = Field(description="表单ID")
+    query_params: Dict[str, Any] = Field(default_factory=dict, description="查询参数")
+    executed_sql: Optional[str] = Field(default=None, description="实际执行的SQL")
+    execution_time: Optional[float] = Field(default=None, description="执行时间(秒)")
+    row_count: Optional[int] = Field(default=None, description="返回行数")
+    success: bool = Field(description="是否成功")
+    error_message: Optional[str] = Field(default=None, description="错误信息")
+    user_id: str = Field(default="system", description="用户ID")
+
+
+class SQLParseResult(BaseSchema):
+    """SQL解析结果"""
+    
+    parameters: List[str] = Field(description="解析出的参数列表")
+    suggested_fields: List[QueryFormField] = Field(description="建议的字段配置")
+    warnings: List[str] = Field(default_factory=list, description="解析警告")
+
+
+class DataSourceTestRequest(BaseSchema):
+    """数据源测试请求"""
+    
+    data_source_config: Dict[str, Any] = Field(description="数据源配置")
+    server_name: Optional[str] = Field(default=None, description="服务器名称")
+
+
+class DataSourceTestResponse(BaseSchema):
+    """数据源测试响应"""
+    
+    success: bool = Field(description="是否成功")
+    data: List[Dict[str, Any]] = Field(default_factory=list, description="测试数据")
+    error_message: Optional[str] = Field(default=None, description="错误信息")
 
 
 

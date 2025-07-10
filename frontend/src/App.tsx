@@ -12,6 +12,8 @@ import SavedQueries from './pages/SavedQueries/SavedQueries';
 import Settings from './pages/Settings/Settings';
 import MenuConfig from './pages/MenuConfig/MenuConfig';
 import DatabaseConfig from './pages/DatabaseConfig/DatabaseConfig';
+import QueryFormManagement from './pages/QueryForms/QueryFormManagement';
+import QueryFormExecution from './pages/QueryForms/QueryFormExecution';
 import { DatabaseProvider } from './contexts/DatabaseContext';
 import './App.css';
 
@@ -104,6 +106,8 @@ function App() {
                   <Route path="/query-stats" element={<QueryStats />} />
                   <Route path="/database-config" element={<DatabaseConfig />} />
                   <Route path="/menu-config" element={<MenuConfig />} />
+                  <Route path="/query-forms" element={<QueryFormManagement />} />
+                  <Route path="/query-forms/:formId/execute" element={<QueryFormExecution />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/about" element={<About />} />
                   

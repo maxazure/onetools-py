@@ -116,3 +116,36 @@ class QueryPerformance(Base):
     last_execution = Column(DateTime, default=datetime.utcnow, comment="最后执行时间")
     created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+
+
+class QueryForm(Base):
+    """动态查询表单配置主表"""
+    __tablename__ = "query_forms"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    form_name = Column(String(255), nullable=False, unique=True, comment="表单名称")
+    form_description = Column(Text, comment="表单描述")
+    sql_template = Column(Text, nullable=False, comment="带@参数的SQL Server查询模板")
+    form_config = Column(JSON, nullable=False, comment="JSON格式的表单配置")
+    target_database = Column(String(255), comment="目标SQL Server数据库名")
+    is_active = Column(Boolean, default=True, comment="是否激活")
+    created_by = Column(String(100), default="system", comment="创建者")
+    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+
+
+class QueryFormHistory(Base):
+    """动态查询表单执行历史记录表"""
+    __tablename__ = "query_form_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    form_id = Column(Integer, nullable=False, comment="表单ID，关联query_forms.id")
+    query_params = Column(JSON, comment="JSON格式的查询参数")
+    executed_sql = Column(Text, comment="实际执行的SQL")
+    execution_time = Column(Float, comment="执行时间(秒)")
+    row_count = Column(Integer, comment="返回行数")
+    success = Column(Boolean, nullable=False, comment="是否成功")
+    error_message = Column(Text, comment="错误信息")
+    user_id = Column(String(100), default="system", comment="用户ID")
+    created_at = Column(DateTime, default=datetime.utcnow, comment="执行时间")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")

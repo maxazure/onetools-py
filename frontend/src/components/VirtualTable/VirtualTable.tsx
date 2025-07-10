@@ -30,6 +30,12 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
   const [isResizing, setIsResizing] = useState(false);
   const [resizingIndex, setResizingIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [tableWidth, setTableWidth] = useState<number | undefined>(undefined);
+
+  // 计算总列宽
+  const totalColumnWidth = useMemo(() => {
+    return columnWidths.reduce((sum, width) => sum + width, 0);
+  }, [columnWidths]);
 
   // 计算可视区域内需要渲染的行
   const visibleRange = useMemo(() => {
@@ -63,11 +69,25 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
     
     const startX = e.clientX;
     const startWidth = columnWidths[columnIndex];
+    const containerWidth = containerRef.current?.clientWidth || 0;
     
     const handleMouseMove = (e: MouseEvent) => {
       const newWidth = Math.max(60, startWidth + (e.clientX - startX)); // 最小宽度60px
       const newWidths = [...columnWidths];
+      const oldWidth = newWidths[columnIndex];
       newWidths[columnIndex] = newWidth;
+      
+      // 计算新的总宽度
+      const newTotalWidth = newWidths.reduce((sum, width) => sum + width, 0);
+      
+      // 如果新的总宽度超过容器宽度，则调整表格宽度
+      if (newTotalWidth > containerWidth) {
+        setTableWidth(newTotalWidth);
+      } else {
+        // 如果总宽度小于容器宽度，则使用容器宽度
+        setTableWidth(undefined);
+      }
+      
       setColumnWidths(newWidths);
     };
     
@@ -81,6 +101,26 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
   }, [columnWidths]);
+
+  // 当列数变化时重置列宽和表格宽度
+  useEffect(() => {
+    if (columns.length !== columnWidths.length) {
+      setColumnWidths(columns.map(() => 120));
+      setTableWidth(undefined);
+    }
+  }, [columns.length, columnWidths.length]);
+
+  // 初始化表格宽度
+  useEffect(() => {
+    if (containerRef.current) {
+      const containerWidth = containerRef.current.clientWidth;
+      if (totalColumnWidth > containerWidth) {
+        setTableWidth(totalColumnWidth);
+      } else {
+        setTableWidth(undefined);
+      }
+    }
+  }, [totalColumnWidth]);
 
   // 当列数变化时重置列宽
   useEffect(() => {
@@ -139,7 +179,12 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
       onScroll={handleScroll}
     >
       {/* 虚拟滚动容器 */}
-      <div style={{ height: totalHeight, position: 'relative' }}>
+      <div style={{ 
+        height: totalHeight, 
+        position: 'relative',
+        width: tableWidth || '100%',
+        minWidth: '100%'
+      }}>
         {/* 表头 */}
         <div style={{
           position: 'sticky',
@@ -149,7 +194,9 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
           borderBottom: '2px solid #d9d9d9',
           display: 'flex',
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          height: '41px'
+          height: '41px',
+          width: tableWidth || '100%',
+          minWidth: '100%'
         }}>
           {columns.map((column, index) => (
             <div
@@ -170,21 +217,19 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
             >
               {column}
               {/* 拖拽手柄 */}
-              {index < columns.length - 1 && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    right: '-2px',
-                    width: '4px',
-                    height: '100%',
-                    cursor: 'col-resize',
-                    backgroundColor: isResizing && resizingIndex === index ? '#1890ff' : 'transparent',
-                    zIndex: 10
-                  }}
-                  onMouseDown={(e) => handleMouseDown(e, index)}
-                />
-              )}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: '-2px',
+                  width: '4px',
+                  height: '100%',
+                  cursor: 'col-resize',
+                  backgroundColor: isResizing && resizingIndex === index ? '#1890ff' : 'transparent',
+                  zIndex: 10
+                }}
+                onMouseDown={(e) => handleMouseDown(e, index)}
+              />
             </div>
           ))}
         </div>
@@ -194,7 +239,9 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
           position: 'absolute',
           top: offsetY + 43, // 表头高度 + 边框
           left: 0,
-          right: 0
+          right: 0,
+          width: tableWidth || '100%',
+          minWidth: '100%'
         }}>
           {visibleData.map((row, rowIndex) => {
             const actualRowIndex = visibleRange.start + rowIndex;

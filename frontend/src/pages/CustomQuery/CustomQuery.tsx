@@ -27,7 +27,8 @@ import { useLocation } from 'react-router-dom';
 import SqlEditor from '../../components/SqlEditor/SqlEditor';
 import QueryResults from '../../components/QueryResults/QueryResults';
 import MultipleQueryResults from '../../components/MultipleQueryResults/MultipleQueryResults';
-import { apiService } from '../../services/api';
+import SchemaAnalysisModal from '../../components/SchemaAnalysisModal/SchemaAnalysisModal';
+import { apiService, customQueryApi } from '../../services/api';
 import { CustomQueryRequest, QueryResult, MultipleQueryResult } from '../../types/api';
 import { useDatabaseContext } from '../../contexts/DatabaseContext';
 
@@ -40,6 +41,8 @@ const CustomQuery: React.FC = () => {
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [queryName, setQueryName] = useState('');
   const [queryDescription, setQueryDescription] = useState('');
+  const [schemaModalVisible, setSchemaModalVisible] = useState(false);
+  const [schemaAnalysisData, setSchemaAnalysisData] = useState<any>(null);
   
   const queryClient = useQueryClient();
   const { currentServer } = useDatabaseContext();
@@ -162,6 +165,24 @@ const CustomQuery: React.FC = () => {
     },
     onError: (error: any) => {
       message.error(error.error_message || 'Failed to save query');
+    },
+  });
+
+  // Schema analysis mutation
+  const schemaAnalysisMutation = useMutation({
+    mutationFn: (request: { sql: string; server_name?: string }) => customQueryApi.analyzeSchema(request),
+    onSuccess: (response) => {
+      if (response.success && response.data) {
+        setSchemaAnalysisData(response.data);
+        setSchemaModalVisible(true);
+        message.success('表结构分析完成');
+      } else {
+        message.error('表结构分析失败');
+      }
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Schema analysis failed';
+      message.error(`表结构分析失败: ${errorMessage}`);
     },
   });
 
@@ -296,6 +317,18 @@ const CustomQuery: React.FC = () => {
     }
   }, [queryResult, message]);
 
+  const handleAnalyzeSchema = useCallback(() => {
+    if (!sqlQuery.trim()) {
+      message.warning('请输入SQL查询语句');
+      return;
+    }
+
+    schemaAnalysisMutation.mutate({
+      sql: sqlQuery,
+      server_name: currentServer
+    });
+  }, [sqlQuery, currentServer, schemaAnalysisMutation, message]);
+
 
   return (
     <div style={{ height: 'calc(100vh - 112px)', display: 'flex', flexDirection: 'column' }}>
@@ -326,7 +359,9 @@ const CustomQuery: React.FC = () => {
             onSave={handleSaveQuery}
             onFormat={handleFormatQuery}
             onClear={handleClearQuery}
+            onAnalyzeSchema={handleAnalyzeSchema}
             loading={executeQueryMutation.isPending}
+            analyzingSchema={schemaAnalysisMutation.isPending}
             height={220}
           />
         </Card>
@@ -400,6 +435,17 @@ const CustomQuery: React.FC = () => {
           </div>
         </Space>
       </Modal>
+
+      {/* Schema Analysis Modal */}
+      <SchemaAnalysisModal
+        visible={schemaModalVisible}
+        data={schemaAnalysisData}
+        loading={schemaAnalysisMutation.isPending}
+        onClose={() => {
+          setSchemaModalVisible(false);
+          setSchemaAnalysisData(null);
+        }}
+      />
     </div>
   );
 };

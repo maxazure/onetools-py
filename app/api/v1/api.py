@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import custom, database, settings
+from app.api.v1.endpoints import custom, database, settings, query_forms
 from app.api.routes.query_history import router as query_history_router
 
 api_router = APIRouter()
@@ -33,4 +33,11 @@ api_router.include_router(
     settings.router,
     prefix="/settings",
     tags=["系统设置"]
+)
+
+# 动态查询表单路由
+api_router.include_router(
+    query_forms.router,
+    prefix="/query-forms",
+    tags=["动态查询表单"]
 )

@@ -137,6 +137,12 @@ class ApiService {
     return response.data;
   }
 
+  async analyzeSchema(request: { sql: string; server_name?: string }): Promise<ApiResponse<any>> {
+    const sqlClient = this.createSqlClient();
+    const response = await sqlClient.post('/api/v1/custom/analyze-schema', request);
+    return response.data;
+  }
+
   // Dynamic queries - 使用专用SQL客户端，禁用重试
   async executeDynamicQuery(request: DynamicQueryRequest): Promise<PaginatedResponse<QueryResult>> {
     const sqlClient = this.createSqlClient();
@@ -401,6 +407,7 @@ export const customQueryApi = {
   executeCustomQuery: (request: CustomQueryRequest) => apiService.executeCustomQuery(request),
   validateCustomQuery: (sql: string) => apiService.validateCustomQuery(sql),
   getCustomQueryParameters: () => apiService.getCustomQueryParameters(),
+  analyzeSchema: (request: { sql: string; server_name?: string }) => apiService.analyzeSchema(request),
 };
 
 export default apiService;
