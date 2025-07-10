@@ -252,7 +252,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               fontWeight: 'bold'
             }}
           >
-            SQL查询管理器 v1.0
+            OneTools v1.0
           </Title>
         </div>
         

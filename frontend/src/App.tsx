@@ -71,7 +71,7 @@ const QueryStats: React.FC = () => (
 const About: React.FC = () => (
   <div style={{ padding: 24 }}>
     <h2>关于</h2>
-    <h3>SQL查询管理器 v1.0</h3>
+    <h3>OneTools</h3>
     <p>一个功能强大的SQL查询管理工具，支持多数据库连接、查询历史记录、结果导出等功能。</p>
   </div>
 );
@@ -81,7 +81,7 @@ const About: React.FC = () => (
 const Dashboard: React.FC = () => (
   <div style={{ padding: 24 }}>
     <h2>SQL查询管理器</h2>
-    <p>欢迎使用 SQL查询管理器 v1.0</p>
+    <p>欢迎使用 OneTools v1.0</p>
     <p>请从左侧菜单选择功能开始使用。</p>
   </div>
 );
