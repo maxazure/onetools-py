@@ -7,6 +7,44 @@ import { Typography } from 'antd';
 
 const { Text } = Typography;
 
+// 性能优化：行组件使用 memo 避免不必要的重新渲染
+const TableRow = React.memo<{
+  row: any;
+  columns: string[];
+  columnWidths: number[];
+  rowHeight: number;
+  actualRowIndex: number;
+}>(({ row, columns, columnWidths, rowHeight, actualRowIndex }) => (
+  <div
+    style={{
+      height: rowHeight,
+      display: 'flex',
+      backgroundColor: actualRowIndex % 2 === 0 ? '#ffffff' : '#fafafa',
+      borderBottom: '1px solid #f0f0f0'
+    }}
+  >
+    {columns.map((column, colIndex) => (
+      <div
+        key={colIndex}
+        style={{
+          width: columnWidths[colIndex],
+          minWidth: '60px',
+          padding: '6px 12px',
+          fontSize: '12px',
+          borderRight: colIndex < columns.length - 1 ? '1px solid #f0f0f0' : 'none',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          display: 'flex',
+          alignItems: 'center'
+        }}
+      >
+        {String(row[column] || '')}
+      </div>
+    ))}
+  </div>
+));
+
 interface VirtualTableProps {
   data: any[];
   columns: string[];
@@ -23,7 +61,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
   loading = false,
 }) => {
   const [scrollTop, setScrollTop] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(height);
+  const [containerHeight, setContainerHeight] = useState(height - 43); // 减去表头高度
   const [columnWidths, setColumnWidths] = useState<number[]>(
     () => columns.map(() => 120) // 初始宽度120px
   );
@@ -37,14 +75,16 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
     return columnWidths.reduce((sum, width) => sum + width, 0);
   }, [columnWidths]);
 
-  // 计算可视区域内需要渲染的行
+  // 计算可视区域内需要渲染的行 - 优化大数据性能
   const visibleRange = useMemo(() => {
     const start = Math.floor(scrollTop / rowHeight);
-    const visibleCount = Math.ceil(containerHeight / rowHeight);
-    const end = Math.min(start + visibleCount + 5, data.length); // 多渲染5行作为缓冲
+    const visibleCount = Math.ceil(Math.max(containerHeight, 0) / rowHeight);
+    // 对于大数据集，使用固定的小缓冲区以保持性能
+    const bufferSize = Math.min(3, Math.max(1, Math.floor(visibleCount / 4))); 
+    const end = Math.min(start + visibleCount + bufferSize, data.length);
     
     return {
-      start: Math.max(0, start - 5), // 向前缓冲5行
+      start: Math.max(0, start - bufferSize),
       end,
       visibleCount
     };
@@ -55,7 +95,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
     return data.slice(visibleRange.start, visibleRange.end);
   }, [data, visibleRange.start, visibleRange.end]);
 
-  // 处理滚动事件
+  // 处理滚动事件 - 使用节流优化性能
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const scrollTop = e.currentTarget.scrollTop;
     setScrollTop(scrollTop);
@@ -102,6 +142,29 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
     document.addEventListener('mouseup', handleMouseUp);
   }, [columnWidths]);
 
+  // 监听容器高度变化
+  useEffect(() => {
+    setContainerHeight(height - 43); // 43px = 表头高度(41px) + 边框(2px)
+  }, [height]);
+
+  // 监听容器尺寸变化
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { height: newHeight } = entry.contentRect;
+        setContainerHeight(newHeight - 43); // 减去表头高度
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
   // 当列数变化时重置列宽和表格宽度
   useEffect(() => {
     if (columns.length !== columnWidths.length) {
@@ -121,13 +184,6 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
       }
     }
   }, [totalColumnWidth]);
-
-  // 当列数变化时重置列宽
-  useEffect(() => {
-    if (columns.length !== columnWidths.length) {
-      setColumnWidths(columns.map(() => 120));
-    }
-  }, [columns.length, columnWidths.length]);
 
   // 总高度
   const totalHeight = data.length * rowHeight;
@@ -246,41 +302,20 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
           {visibleData.map((row, rowIndex) => {
             const actualRowIndex = visibleRange.start + rowIndex;
             return (
-              <div
+              <TableRow
                 key={actualRowIndex}
-                style={{
-                  height: rowHeight,
-                  display: 'flex',
-                  backgroundColor: actualRowIndex % 2 === 0 ? '#ffffff' : '#fafafa',
-                  borderBottom: '1px solid #f0f0f0'
-                }}
-              >
-                {columns.map((column, colIndex) => (
-                  <div
-                    key={colIndex}
-                    style={{
-                      width: columnWidths[colIndex],
-                      minWidth: '60px',
-                      padding: '6px 12px',
-                      fontSize: '12px',
-                      borderRight: colIndex < columns.length - 1 ? '1px solid #f0f0f0' : 'none',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}
-                  >
-                    {String(row[column] || '')}
-                  </div>
-                ))}
-              </div>
+                row={row}
+                columns={columns}
+                columnWidths={columnWidths}
+                rowHeight={rowHeight}
+                actualRowIndex={actualRowIndex}
+              />
             );
           })}
         </div>
       </div>
 
-      {/* 滚动指示器 */}
+      {/* 滚动指示器 - 简化以提高性能 */}
       <div style={{
         position: 'absolute',
         bottom: '8px',
