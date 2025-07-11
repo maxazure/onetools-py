@@ -151,9 +151,6 @@ const SchemaAnalysisModal: React.FC<SchemaAnalysisModalProps> = ({
               • 如果包含视图，会递归分析视图中依赖的表结构
             </Text>
             <Text>
-              • 可以将这些定义复制给LLM（如ChatGPT、Claude等）进行数据库结构分析
-            </Text>
-            <Text>
               • 结构定义包含了列名、数据类型、约束等完整信息
             </Text>
           </Space>
