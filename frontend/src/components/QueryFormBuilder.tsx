@@ -36,9 +36,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import CodeMirror from '@uiw/react-codemirror';
-import { sql } from '@codemirror/lang-sql';
-import { oneDark } from '@codemirror/theme-one-dark';
+import SqlEditor from './SqlEditor/SqlEditor';
 
 import {
   QueryFormField,
@@ -94,7 +92,6 @@ const QueryFormBuilder: React.FC<QueryFormBuilderProps> = ({
           field_spacing: '16px',
         },
       },
-      target_database: '',
     },
     isDirty: false,
     isValidating: false,
@@ -115,14 +112,12 @@ const QueryFormBuilder: React.FC<QueryFormBuilderProps> = ({
           form_description: initialForm.form_description || '',
           sql_template: initialForm.sql_template,
           form_config: initialForm.form_config,
-          target_database: initialForm.target_database || '',
         },
       }));
       form.setFieldsValue({
         form_name: initialForm.form_name,
         form_description: initialForm.form_description,
         sql_template: initialForm.sql_template,
-        target_database: initialForm.target_database,
         ...initialForm.form_config,
       });
     }
@@ -167,6 +162,135 @@ const QueryFormBuilder: React.FC<QueryFormBuilderProps> = ({
     }
   }, []);
 
+  // 根据字段类型获取默认匹配类型
+  const getDefaultMatchType = (fieldType: FieldType): MatchType => {
+    switch (fieldType) {
+      case FieldType.NUMBER:
+        return MatchType.EXACT;
+      case FieldType.TEXT:
+      case FieldType.EMAIL:
+      case FieldType.TEXTAREA:
+        return MatchType.LIKE;
+      case FieldType.DATE:
+      case FieldType.DATETIME:
+        return MatchType.EXACT;
+      case FieldType.SELECT:
+      case FieldType.RADIO:
+        return MatchType.EXACT;
+      case FieldType.MULTISELECT:
+      case FieldType.CHECKBOX:
+        return MatchType.IN_LIST;
+      default:
+        return MatchType.EXACT;
+    }
+  };
+
+  // 根据字段类型获取可用的匹配类型
+  const getAvailableMatchTypes = (fieldType: FieldType): MatchType[] => {
+    switch (fieldType) {
+      case FieldType.NUMBER:
+        return [
+          MatchType.EXACT,
+          MatchType.NOT_EQUAL,
+          MatchType.GREATER,
+          MatchType.GREATER_EQUAL,
+          MatchType.LESS,
+          MatchType.LESS_EQUAL,
+          MatchType.BETWEEN,
+          MatchType.IN_LIST,
+          MatchType.IS_NULL,
+          MatchType.IS_NOT_NULL,
+        ];
+      case FieldType.TEXT:
+      case FieldType.EMAIL:
+      case FieldType.TEXTAREA:
+        return [
+          MatchType.EXACT,
+          MatchType.NOT_EQUAL,
+          MatchType.LIKE,
+          MatchType.NOT_LIKE,
+          MatchType.START_WITH,
+          MatchType.END_WITH,
+          MatchType.CONTAINS,
+          MatchType.IN_LIST,
+          MatchType.IS_NULL,
+          MatchType.IS_NOT_NULL,
+        ];
+      case FieldType.DATE:
+      case FieldType.DATETIME:
+        return [
+          MatchType.EXACT,
+          MatchType.NOT_EQUAL,
+          MatchType.GREATER,
+          MatchType.GREATER_EQUAL,
+          MatchType.LESS,
+          MatchType.LESS_EQUAL,
+          MatchType.BETWEEN,
+          MatchType.IS_NULL,
+          MatchType.IS_NOT_NULL,
+        ];
+      case FieldType.SELECT:
+      case FieldType.RADIO:
+        return [
+          MatchType.EXACT,
+          MatchType.NOT_EQUAL,
+          MatchType.IN_LIST,
+          MatchType.IS_NULL,
+          MatchType.IS_NOT_NULL,
+        ];
+      case FieldType.MULTISELECT:
+      case FieldType.CHECKBOX:
+        return [
+          MatchType.IN_LIST,
+          MatchType.NOT_IN_LIST,
+          MatchType.IS_NULL,
+          MatchType.IS_NOT_NULL,
+        ];
+      default:
+        return Object.values(MatchType);
+    }
+  };
+
+  // 获取匹配类型的显示名称
+  const getMatchTypeLabel = (matchType: MatchType): string => {
+    switch (matchType) {
+      case MatchType.EXACT:
+        return '等于 (=)';
+      case MatchType.NOT_EQUAL:
+        return '不等于 (<>)';
+      case MatchType.GREATER:
+        return '大于 (>)';
+      case MatchType.GREATER_EQUAL:
+        return '大于等于 (>=)';
+      case MatchType.LESS:
+        return '小于 (<)';
+      case MatchType.LESS_EQUAL:
+        return '小于等于 (<=)';
+      case MatchType.BETWEEN:
+        return '区间匹配 (BETWEEN)';
+      case MatchType.LIKE:
+        return '模糊匹配 (LIKE)';
+      case MatchType.NOT_LIKE:
+        return '不匹配 (NOT LIKE)';
+      case MatchType.START_WITH:
+        return '开头匹配';
+      case MatchType.END_WITH:
+        return '结尾匹配';
+      case MatchType.CONTAINS:
+        return '包含';
+      case MatchType.IN_LIST:
+        return '在列表中 (IN)';
+      case MatchType.NOT_IN_LIST:
+        return '不在列表中 (NOT IN)';
+      case MatchType.IS_NULL:
+        return '为空 (IS NULL)';
+      case MatchType.IS_NOT_NULL:
+        return '不为空 (IS NOT NULL)';
+      default:
+        return matchType;
+    }
+  };
+
   // 字段操作
   const handleFieldAdd = () => {
     const newField: QueryFormField = {
@@ -199,9 +323,19 @@ const QueryFormBuilder: React.FC<QueryFormBuilderProps> = ({
         ...prev.form,
         form_config: {
           ...prev.form.form_config,
-          fields: prev.form.form_config.fields.map((f, i) => 
-            i === index ? { ...f, ...field } : f
-          ),
+          fields: prev.form.form_config.fields.map((f, i) => {
+            if (i === index) {
+              const updatedField = { ...f, ...field };
+              
+              // 如果字段类型发生变化，自动选择适合的匹配类型
+              if (field.field_type && field.field_type !== f.field_type) {
+                updatedField.match_type = getDefaultMatchType(field.field_type);
+              }
+              
+              return updatedField;
+            }
+            return f;
+          }),
         },
       },
       isDirty: true,
@@ -285,7 +419,6 @@ const QueryFormBuilder: React.FC<QueryFormBuilderProps> = ({
           form_description: state.form.form_description,
           sql_template: state.form.sql_template,
           form_config: state.form.form_config,
-          target_database: state.form.target_database,
         };
         console.log('📤 发送创建请求', createData);
         const result = await queryFormApi.createForm(createData);
@@ -306,7 +439,6 @@ const QueryFormBuilder: React.FC<QueryFormBuilderProps> = ({
           form_description: state.form.form_description,
           sql_template: state.form.sql_template,
           form_config: state.form.form_config,
-          target_database: state.form.target_database,
         };
         const result = await queryFormApi.updateForm(initialForm!.id, updateData);
         
@@ -408,8 +540,10 @@ const QueryFormBuilder: React.FC<QueryFormBuilderProps> = ({
               value={field.match_type}
               onChange={(value) => handleFieldUpdate(index, { match_type: value })}
             >
-              {Object.values(MatchType).map(type => (
-                <Option key={type} value={type}>{type}</Option>
+              {getAvailableMatchTypes(field.field_type).map(type => (
+                <Option key={type} value={type}>
+                  {getMatchTypeLabel(type)}
+                </Option>
               ))}
             </Select>
           </Form.Item>
@@ -442,6 +576,175 @@ const QueryFormBuilder: React.FC<QueryFormBuilderProps> = ({
           </Form.Item>
         </Col>
       </Row>
+      
+      {/* 数据源配置 */}
+      {(field.field_type === FieldType.SELECT || field.field_type === FieldType.MULTISELECT || 
+        field.field_type === FieldType.RADIO || field.field_type === FieldType.CHECKBOX) && (
+        <div style={{ marginTop: 16 }}>
+          <Form.Item label="数据源类型">
+            <Select
+              value={field.data_source?.type || 'static'}
+              onChange={(value) => handleFieldUpdate(index, { 
+                data_source: { 
+                  type: value as 'static' | 'sql',
+                  options: value === 'static' ? [{ label: '选项1', value: 'option1' }] : undefined,
+                  sql: value === 'sql' ? 'SELECT value, label FROM table_name' : undefined,
+                  value_column: value === 'sql' ? 'value' : undefined,
+                  display_column: value === 'sql' ? 'label' : undefined,
+                }
+              })}
+            >
+              <Option value="static">静态选项</Option>
+              <Option value="sql">SQL查询</Option>
+            </Select>
+          </Form.Item>
+          
+          {field.data_source?.type === 'static' && (
+            <Form.Item label="静态选项">
+              <div>
+                {field.data_source.options?.map((option, optionIndex) => (
+                  <Row key={optionIndex} gutter={8} style={{ marginBottom: 8 }}>
+                    <Col span={8}>
+                      <Input
+                        placeholder="显示文本"
+                        value={option.label}
+                        onChange={(e) => {
+                          const newOptions = [...(field.data_source?.options || [])];
+                          newOptions[optionIndex] = { ...option, label: e.target.value };
+                          handleFieldUpdate(index, {
+                            data_source: { ...field.data_source!, options: newOptions }
+                          });
+                        }}
+                      />
+                    </Col>
+                    <Col span={8}>
+                      <Input
+                        placeholder="值"
+                        value={option.value}
+                        onChange={(e) => {
+                          const newOptions = [...(field.data_source?.options || [])];
+                          newOptions[optionIndex] = { ...option, value: e.target.value };
+                          handleFieldUpdate(index, {
+                            data_source: { ...field.data_source!, options: newOptions }
+                          });
+                        }}
+                      />
+                    </Col>
+                    <Col span={8}>
+                      <Space>
+                        <Button
+                          size="small"
+                          icon={<PlusOutlined />}
+                          onClick={() => {
+                            const newOptions = [...(field.data_source?.options || [])];
+                            newOptions.splice(optionIndex + 1, 0, { label: '新选项', value: 'new_option' });
+                            handleFieldUpdate(index, {
+                              data_source: { ...field.data_source!, options: newOptions }
+                            });
+                          }}
+                        />
+                        {field.data_source.options!.length > 1 && (
+                          <Button
+                            size="small"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={() => {
+                              const newOptions = [...(field.data_source?.options || [])];
+                              newOptions.splice(optionIndex, 1);
+                              handleFieldUpdate(index, {
+                                data_source: { ...field.data_source!, options: newOptions }
+                              });
+                            }}
+                          />
+                        )}
+                      </Space>
+                    </Col>
+                  </Row>
+                ))}
+              </div>
+            </Form.Item>
+          )}
+          
+          {field.data_source?.type === 'sql' && (
+            <div>
+              <Form.Item 
+                label="SQL查询语句" 
+                help={
+                  <div>
+                    <div>查询语句应返回用于显示和存储的列，示例：</div>
+                    <div style={{ fontFamily: 'monospace', fontSize: '12px', marginTop: '4px' }}>
+                      <div>-- 用户组选项</div>
+                      <div>SELECT usergroupid as value, usergroupname as label</div>
+                      <div>FROM usergroups WHERE is_active = 1</div>
+                      <div>ORDER BY usergroupname</div>
+                    </div>
+                  </div>
+                }
+              >
+                <SqlEditor
+                  value={field.data_source.sql || 'SELECT value_column as value, display_column as label\nFROM table_name\nWHERE condition = 1\nORDER BY display_column'}
+                  onChange={(value) => handleFieldUpdate(index, {
+                    data_source: { ...field.data_source!, sql: value }
+                  })}
+                  height="120px"
+                  showToolbar={false}
+                  placeholder="请输入SQL查询语句"
+                />
+              </Form.Item>
+              
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="值字段" help="用于存储的字段名">
+                    <Input
+                      placeholder="value"
+                      value={field.data_source.value_column || ''}
+                      onChange={(e) => handleFieldUpdate(index, {
+                        data_source: { ...field.data_source!, value_column: e.target.value }
+                      })}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="显示字段" help="用于显示的字段名">
+                    <Input
+                      placeholder="label"
+                      value={field.data_source.display_column || ''}
+                      onChange={(e) => handleFieldUpdate(index, {
+                        data_source: { ...field.data_source!, display_column: e.target.value }
+                      })}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              
+              <Form.Item>
+                <Button
+                  type="dashed"
+                  icon={<BugOutlined />}
+                  onClick={async () => {
+                    try {
+                      const result = await queryFormApi.testDataSource({
+                        data_source_config: field.data_source!,
+                        server_name: '', // 使用当前服务器
+                      });
+                      
+                      if (result.success && result.data) {
+                        message.success(`测试成功，返回${result.data.data.length}条记录`);
+                      } else {
+                        message.error('测试失败: ' + (result.errors?.join(', ') || '未知错误'));
+                      }
+                    } catch (error) {
+                      message.error('测试失败: ' + (error as Error).message);
+                    }
+                  }}
+                >
+                  测试数据源
+                </Button>
+              </Form.Item>
+            </div>
+          )}
+        </div>
+      )}
     </Card>
   );
 
@@ -451,46 +754,25 @@ const QueryFormBuilder: React.FC<QueryFormBuilderProps> = ({
         <Tabs activeKey={activeTab} onChange={setActiveTab}>
           <TabPane tab="基本信息" key="basic">
             <Card title="表单基本信息">
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                    label="表单名称"
-                    name="form_name"
-                    rules={[{ required: true, message: '请输入表单名称' }]}
-                  >
-                    <Input
-                      placeholder="请输入表单名称"
-                      value={state.form.form_name}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setState(prev => ({
-                          ...prev,
-                          form: { ...prev.form, form_name: value },
-                          isDirty: true,
-                        }));
-                        form.setFieldsValue({ form_name: value });
-                      }}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item label="目标数据库" name="target_database">
-                    <Input
-                      placeholder="目标数据库名称"
-                      value={state.form.target_database}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setState(prev => ({
-                          ...prev,
-                          form: { ...prev.form, target_database: value },
-                          isDirty: true,
-                        }));
-                        form.setFieldsValue({ target_database: value });
-                      }}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
+              <Form.Item
+                label="表单名称"
+                name="form_name"
+                rules={[{ required: true, message: '请输入表单名称' }]}
+              >
+                <Input
+                  placeholder="请输入表单名称"
+                  value={state.form.form_name}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setState(prev => ({
+                      ...prev,
+                      form: { ...prev.form, form_name: value },
+                      isDirty: true,
+                    }));
+                    form.setFieldsValue({ form_name: value });
+                  }}
+                />
+              </Form.Item>
               
               <Form.Item label="表单描述" name="form_description">
                 <TextArea
@@ -532,11 +814,8 @@ const QueryFormBuilder: React.FC<QueryFormBuilderProps> = ({
                 name="sql_template"
                 rules={[{ required: true, message: '请输入SQL模板' }]}
               >
-                <CodeMirror
+                <SqlEditor
                   value={state.form.sql_template}
-                  height="300px"
-                  extensions={[sql()]}
-                  theme={oneDark}
                   onChange={(value) => {
                     setState(prev => ({
                       ...prev,
@@ -545,6 +824,9 @@ const QueryFormBuilder: React.FC<QueryFormBuilderProps> = ({
                     }));
                     form.setFieldsValue({ sql_template: value });
                   }}
+                  height="300px"
+                  showToolbar={false}
+                  placeholder="请输入SQL模板，使用@参数名作为占位符，例如：SELECT * FROM users WHERE name = @username"
                 />
               </Form.Item>
               

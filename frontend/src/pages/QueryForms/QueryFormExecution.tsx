@@ -274,14 +274,6 @@ const QueryFormExecution: React.FC = () => {
           </div>
         )}
 
-        {form.target_database && (
-          <div style={{ marginTop: 8 }}>
-            <Space>
-              <Text type="secondary">目标数据库:</Text>
-              <Tag>{form.target_database}</Tag>
-            </Space>
-          </div>
-        )}
       </Card>
 
       {/* 表单执行区域 */}

@@ -222,9 +222,6 @@ const DatabaseServerManagement: React.FC = () => {
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <div>
-          <Text type="secondary">管理数据库服务器连接配置</Text>
-        </div>
         <Button
           type="primary"
           icon={<PlusOutlined />}

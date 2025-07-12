@@ -128,8 +128,7 @@ const QueryFormManagement: React.FC = () => {
     const searchLower = state.searchTerm.toLowerCase();
     return (
       form.form_name.toLowerCase().includes(searchLower) ||
-      (form.form_description && form.form_description.toLowerCase().includes(searchLower)) ||
-      (form.target_database && form.target_database.toLowerCase().includes(searchLower))
+      (form.form_description && form.form_description.toLowerCase().includes(searchLower))
     );
   });
 
@@ -260,25 +259,12 @@ const QueryFormManagement: React.FC = () => {
       onFilter: (value, record) => record.is_active === value,
     },
     {
-      title: '目标数据库',
-      dataIndex: 'target_database',
-      key: 'target_database',
-      width: 120,
-      render: (text) => text || <Text type="secondary">未指定</Text>,
-    },
-    {
       title: '字段数量',
       key: 'field_count',
       width: 80,
       render: (_, record) => (
         <Text>{record.form_config.fields.length}</Text>
       ),
-    },
-    {
-      title: '创建者',
-      dataIndex: 'created_by',
-      key: 'created_by',
-      width: 100,
     },
     {
       title: '创建时间',
@@ -434,7 +420,7 @@ const QueryFormManagement: React.FC = () => {
         <Row gutter={16} style={{ marginBottom: 16 }}>
           <Col span={8}>
             <Search
-              placeholder="搜索表单名称、描述或数据库"
+              placeholder="搜索表单名称或描述"
               allowClear
               onSearch={handleSearch}
               enterButton={<SearchOutlined />}

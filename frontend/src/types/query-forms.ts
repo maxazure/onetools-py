@@ -24,16 +24,31 @@ export enum FieldType {
 
 // 匹配类型枚举
 export enum MatchType {
+  // 精确匹配
   EXACT = 'exact',
-  LIKE = 'like',
-  START_WITH = 'start_with',
-  END_WITH = 'end_with',
+  NOT_EQUAL = 'not_equal',
+  
+  // 数值比较
   GREATER = 'greater',
   GREATER_EQUAL = 'greater_equal',
   LESS = 'less',
   LESS_EQUAL = 'less_equal',
   BETWEEN = 'between',
+  
+  // 文本匹配
+  LIKE = 'like',
+  NOT_LIKE = 'not_like',
+  START_WITH = 'start_with',
+  END_WITH = 'end_with',
+  CONTAINS = 'contains',
+  
+  // 列表匹配
   IN_LIST = 'in_list',
+  NOT_IN_LIST = 'not_in_list',
+  
+  // 空值检查
+  IS_NULL = 'is_null',
+  IS_NOT_NULL = 'is_not_null',
 }
 
 // 数据源类型枚举
@@ -107,7 +122,6 @@ export interface QueryFormBase {
   form_description?: string;
   sql_template: string;
   form_config: QueryFormConfig;
-  target_database?: string;
 }
 
 // 创建查询表单请求
@@ -122,7 +136,6 @@ export interface QueryFormUpdateRequest extends Partial<QueryFormBase> {
 export interface QueryFormResponse extends QueryFormBase, BaseTimestamp {
   id: number;
   is_active: boolean;
-  created_by: string;
 }
 
 // 查询表单执行请求
@@ -238,7 +251,6 @@ export interface FormPreviewData {
     id: number;
     name: string;
     description?: string;
-    target_database?: string;
     is_active: boolean;
   };
   sql_template: string;

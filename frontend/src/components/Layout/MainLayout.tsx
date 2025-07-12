@@ -36,7 +36,8 @@ import {
   LoadingOutlined,
   SaveOutlined,
   FolderOpenOutlined,
-  MenuUnfoldOutlined as MenuIcon
+  MenuUnfoldOutlined as MenuIcon,
+  FormOutlined
 } from '@ant-design/icons';
 import * as Icons from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -44,6 +45,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiService } from '../../services/api';
 import { MenuConfiguration } from '../../types/api';
 import { useMenuConfig } from '../../hooks/useMenuConfig';
+import { useQueryForms } from '../../hooks/useQueryForms';
 import DatabaseSelector from './DatabaseSelector';
 import { useDatabaseContext } from '../../contexts/DatabaseContext';
 
@@ -72,6 +74,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   // Load menu configuration from API
   const { menuItems: apiMenuItems, isLoading: menuLoading, hasData } = useMenuConfig();
+  
+  // Load query forms for dynamic menu
+  const { queryForms, isLoading: formsLoading } = useQueryForms();
 
   // Get icon component by name
   const getIconComponent = (iconName: string) => {
@@ -171,7 +176,30 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     return Object.values(sections);
   };
 
-  const menuConfig = getMenuConfiguration();
+  // Add dynamic forms menu section
+  const addDynamicFormsSection = (menuSections: any[]) => {
+    if (queryForms.length === 0) return menuSections;
+    
+    const formsSection = {
+      section: 'forms',
+      title: '查询表单',
+      items: queryForms.map(form => ({
+        key: `/query-forms/${form.id}/execute`,
+        label: form.form_name,
+        icon: React.createElement(FormOutlined),
+        path: `/query-forms/${form.id}/execute`,
+        description: form.form_description
+      }))
+    };
+    
+    // Insert forms section after main section (index 1)
+    const result = [...menuSections];
+    result.splice(1, 0, formsSection);
+    return result;
+  };
+
+  const baseMenuConfig = getMenuConfiguration();
+  const menuConfig = addDynamicFormsSection(baseMenuConfig);
 
   // Create menu items for Ant Design Menu
   const createMenuItems = () => {

@@ -4,8 +4,6 @@
   "private": true,
   "dependencies": {
     "@ant-design/icons": "^6.0.0",
-    "@codemirror/lang-sql": "^6.9.0",
-    "@codemirror/theme-one-dark": "^6.1.3",
     "@monaco-editor/react": "^4.7.0",
     "@tanstack/react-query": "^5.81.5",
     "@testing-library/dom": "^10.4.0",
@@ -18,7 +16,6 @@
     "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-dom": "^19.1.6",
     "@types/react-router-dom": "^5.3.3",
-    "@uiw/react-codemirror": "^4.24.0",
     "antd": "^5.26.4",
     "axios": "^1.10.0",
     "moment": "^2.30.1",

@@ -24,11 +24,6 @@ const DatabaseConfig: React.FC = () => {
       
       <div style={{ marginTop: 24 }}>
         <Card>
-          <Title level={4}>数据库服务器管理</Title>
-          <Text type="secondary">
-            配置和管理可用的数据库服务器连接，支持SQL Server Windows集成认证
-          </Text>
-          <Divider />
           <DatabaseServerManagement />
         </Card>
       </div>

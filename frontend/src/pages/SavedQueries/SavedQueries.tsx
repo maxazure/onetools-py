@@ -379,20 +379,20 @@ const SavedQueries: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <Title level={2}>
-          <FileTextOutlined style={{ marginRight: '8px' }} />
+    <div style={{ padding: '12px' }}>
+      <div style={{ marginBottom: '12px' }}>
+        <Title level={4} style={{ margin: 0, marginBottom: '4px' }}>
+          <FileTextOutlined style={{ marginRight: '6px', fontSize: '16px' }} />
           Saved Queries
         </Title>
-        <Paragraph type="secondary">
-          Manage your saved SQL queries. Create, edit, organize and execute your frequently used queries.
-        </Paragraph>
+        <Text type="secondary" style={{ fontSize: '12px' }}>
+          Manage your saved SQL queries
+        </Text>
       </div>
 
       {/* Filters and Actions */}
-      <Card style={{ marginBottom: '24px' }}>
-        <Row gutter={[16, 16]} align="middle">
+      <Card size="small" style={{ marginBottom: '12px' }}>
+        <Row gutter={[12, 8]} align="middle">
           <Col xs={24} sm={12} md={8} lg={6}>
             <Input
               placeholder="Search queries..."
@@ -440,18 +440,20 @@ const SavedQueries: React.FC = () => {
       </Card>
 
       {/* Queries Table */}
-      <Card>
+      <Card size="small" bodyStyle={{ padding: '8px' }}>
         <Table
           columns={columns}
           dataSource={filteredQueries}
           rowKey="id"
           loading={isLoading}
+          size="small"
           pagination={{
             total: filteredQueries.length,
-            pageSize: 10,
+            pageSize: 15,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} queries`,
+            size: 'small',
           }}
           scroll={{ x: 1200 }}
         />
@@ -471,9 +473,9 @@ const SavedQueries: React.FC = () => {
         confirmLoading={createQueryMutation.isPending || updateQueryMutation.isPending}
         okText={selectedQuery ? 'Update' : 'Create'}
         cancelText="Cancel"
-        width={800}
+        width={900}
       >
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
           <div>
             <Text strong>Query Name *</Text>
             <Input
@@ -502,7 +504,8 @@ const SavedQueries: React.FC = () => {
                 value={formData.sql}
                 onChange={(value) => setFormData(prev => ({ ...prev, sql: value }))}
                 onExecute={() => {}} // Dummy function for create/edit mode
-                height={200}
+                height={250}
+                showToolbar={false}
               />
             </div>
           </div>
@@ -579,10 +582,10 @@ const SavedQueries: React.FC = () => {
             Execute
           </Button>,
         ]}
-        width={800}
+        width={900}
       >
         {selectedQuery && (
-          <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <Space direction="vertical" style={{ width: '100%' }} size="middle">
             {selectedQuery.description && (
               <div>
                 <Text strong>Description:</Text>
@@ -604,8 +607,9 @@ const SavedQueries: React.FC = () => {
                   value={selectedQuery.sql}
                   onChange={() => {}} // Read-only
                   onExecute={() => {}} // Dummy function for read-only mode
-                  height={200}
+                  height={250}
                   readOnly
+                  showToolbar={false}
                 />
               </div>
             </div>
