@@ -12,7 +12,7 @@ const { Text } = Typography;
 interface SqlEditorProps {
   value: string;
   onChange: (value: string) => void;
-  onExecute: () => void;
+  onExecute?: () => void;
   onSave?: () => void;
   onFormat?: () => void;
   onClear?: () => void;
@@ -22,6 +22,8 @@ interface SqlEditorProps {
   loading?: boolean;
   analyzingSchema?: boolean;
   theme?: 'light' | 'dark';
+  showToolbar?: boolean;
+  placeholder?: string;
 }
 
 const SqlEditor: React.FC<SqlEditorProps> = ({
@@ -37,6 +39,8 @@ const SqlEditor: React.FC<SqlEditorProps> = ({
   loading = false,
   analyzingSchema = false,
   theme = 'light',
+  showToolbar = true,
+  placeholder,
 }) => {
   const editorRef = useRef<any>(null);
   const handleEditorDidMount: OnMount = useCallback((editor, monaco) => {
@@ -130,7 +134,9 @@ const SqlEditor: React.FC<SqlEditorProps> = ({
     });
 
     // Add keyboard shortcuts
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, onExecute);
+    if (onExecute) {
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, onExecute);
+    }
 
     if (onSave) {
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, onSave);
@@ -158,61 +164,71 @@ const SqlEditor: React.FC<SqlEditorProps> = ({
 
   return (
     <div className="sql-editor">
-      <div className="sql-editor-toolbar" style={{ marginBottom: 8 }}>
-        <Space>
-          <Button
-            type="primary"
-            icon={<PlayCircleOutlined />}
-            onClick={onExecute}
-            loading={loading}
-            disabled={readOnly}
-          >
-            执行查询
-          </Button>
-          
-          <Button
-            icon={<SaveOutlined />}
-            onClick={onSave}
-            disabled={readOnly}
-          >
-            保存查询
-          </Button>
-          
-          <Tooltip title="验证语法">
-            <Button
-              icon={<FormatPainterOutlined />}
-              onClick={handleFormat}
-              disabled={readOnly}
-            >
-              验证语法
-            </Button>
-          </Tooltip>
-          
-          <Tooltip title="清空编辑器">
-            <Button
-              icon={<ClearOutlined />}
-              onClick={handleClear}
-              disabled={readOnly}
-            >
-              清空
-            </Button>
-          </Tooltip>
-          
-          {onAnalyzeSchema && (
-            <Tooltip title="分析SQL中的表结构并生成CREATE语句">
+      {showToolbar && (
+        <div className="sql-editor-toolbar" style={{ marginBottom: 8 }}>
+          <Space>
+            {onExecute && (
               <Button
-                icon={<DatabaseOutlined />}
-                onClick={onAnalyzeSchema}
-                loading={analyzingSchema}
-                disabled={readOnly || !value.trim()}
+                type="primary"
+                icon={<PlayCircleOutlined />}
+                onClick={onExecute}
+                loading={loading}
+                disabled={readOnly}
               >
-                分析表结构
+                执行查询
               </Button>
-            </Tooltip>
-          )}
-        </Space>
-        
-      </div>
+            )}
+            
+            {onSave && (
+              <Button
+                icon={<SaveOutlined />}
+                onClick={onSave}
+                disabled={readOnly}
+              >
+                保存查询
+              </Button>
+            )}
+            
+            {onFormat && (
+              <Tooltip title="验证语法">
+                <Button
+                  icon={<FormatPainterOutlined />}
+                  onClick={handleFormat}
+                  disabled={readOnly}
+                >
+                  验证语法
+                </Button>
+              </Tooltip>
+            )}
+            
+            {onClear && (
+              <Tooltip title="清空编辑器">
+                <Button
+                  icon={<ClearOutlined />}
+                  onClick={handleClear}
+                  disabled={readOnly}
+                >
+                  清空
+                </Button>
+              </Tooltip>
+            )}
+            
+            {onAnalyzeSchema && (
+              <Tooltip title="分析SQL中的表结构并生成CREATE语句">
+                <Button
+                  icon={<DatabaseOutlined />}
+                  onClick={onAnalyzeSchema}
+                  loading={analyzingSchema}
+                  disabled={readOnly || !value.trim()}
+                >
+                  分析表结构
+                </Button>
+              </Tooltip>
+            )}
+          </Space>
+          
+        </div>
+      )}
       
       <Editor
         height={height}
@@ -245,6 +261,7 @@ const SqlEditor: React.FC<SqlEditorProps> = ({
           selectionHighlight: false, // 禁用选择高亮
           renderLineHighlight: 'none', // 禁用行高亮
           smoothScrolling: false, // 禁用平滑滚动
+          placeholder: placeholder,
           // 滚动条优化
           scrollbar: {
             verticalScrollbarSize: 8,

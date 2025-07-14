@@ -586,7 +586,7 @@ const QueryFormBuilder: React.FC<QueryFormBuilderProps> = ({
               value={field.data_source?.type || 'static'}
               onChange={(value) => handleFieldUpdate(index, { 
                 data_source: { 
-                  type: value as 'static' | 'sql',
+                  type: value as DataSourceType,
                   options: value === 'static' ? [{ label: '选项1', value: 'option1' }] : undefined,
                   sql: value === 'sql' ? 'SELECT value, label FROM table_name' : undefined,
                   value_column: value === 'sql' ? 'value' : undefined,
@@ -643,7 +643,7 @@ const QueryFormBuilder: React.FC<QueryFormBuilderProps> = ({
                             });
                           }}
                         />
-                        {field.data_source.options!.length > 1 && (
+                        {field.data_source?.options && field.data_source.options.length > 1 && (
                           <Button
                             size="small"
                             danger
